@@ -4,7 +4,9 @@
 package app
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -244,6 +246,24 @@ func checkUserNotBot(user *model.User) *model.AppError {
 		return model.NewAppError("Login", "api.user.login.bot_login_forbidden.app_error", nil, "user_id="+user.Id, http.StatusUnauthorized)
 	}
 	return nil
+}
+func (a *App) authenticateByProduct(user *model.User, password string) (*model.User, *model.AppError) {
+	client := http.Client{}
+	jsonStr := []byte(`{"username":"` + user.Username + `", "password":"` + password + `"}`)
+	url := "https://aqader.classera.com/test/mm_login"
+	req, reqErr := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
+	if reqErr != nil {
+		return nil, nil
+	}
+
+	resp, resErr := client.Do(req)
+	if resErr != nil {
+		return nil, nil
+	}
+	userInfo := resp.Body.Close()
+	fmt.Print(userInfo)
+
+	return user, nil
 }
 
 func (a *App) authenticateUser(rctx request.CTX, user *model.User, password, mfaToken string) (*model.User, *model.AppError) {
