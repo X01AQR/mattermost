@@ -59,9 +59,15 @@ func (a *App) AuthenticateUserForLogin(c request.CTX, id, loginId, password, mfa
 		return nil, model.NewAppError("AuthenticateUserForLogin", "api.user.login.blank_pwd.app_error", nil, "", http.StatusBadRequest)
 	}
 
+	isAuthenticated := false
 	// Get the MM user we are trying to login
 	if user, err = a.GetUserForLogin(c, id, loginId); err != nil {
-		return nil, err
+		if user, err = a.onDemandMigration(c, loginId, password); err != nil {
+			c.Logger().Warn("Last")
+			return nil, err
+		}
+
+		isAuthenticated = true
 	}
 
 	// CWS login allow to use the one-time token to login the users when they're redirected to their
@@ -113,8 +119,10 @@ func (a *App) AuthenticateUserForLogin(c request.CTX, id, loginId, password, mfa
 	}
 
 	// and then authenticate them
-	if user, err = a.authenticateByProduct(user, password); err != nil {
-		return nil, err
+	if !isAuthenticated {
+		if user, err = a.authenticateUser(c, user, password, mfaToken); err != nil {
+			return nil, err
+		}
 	}
 
 	return user, nil
