@@ -5,16 +5,16 @@ package app
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
-	"fmt"
-	"net/http"
-	"strings"
-
 	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/mattermost/mattermost/server/public/shared/mlog"
 	"github.com/mattermost/mattermost/server/public/shared/request"
 	"github.com/mattermost/mattermost/server/v8/channels/app/users"
 	"github.com/mattermost/mattermost/server/v8/platform/shared/mfa"
+	"io"
+	"net/http"
+	"strings"
 )
 
 type TokenLocation int
@@ -247,23 +247,76 @@ func checkUserNotBot(user *model.User) *model.AppError {
 	}
 	return nil
 }
-func (a *App) authenticateByProduct(user *model.User, password string) (*model.User, *model.AppError) {
+
+type ProductUser struct {
+	Id            string `json:"id"`
+	Username      string `json:"username"`
+	Email         string `json:"email"`
+	FirstName     string `json:"first_name"`
+	LastName      string `json:"family_name"`
+	EmailVerified bool   `json:"verified_email"`
+}
+
+func (a *App) onDemandMigration(rctx request.CTX, loginId, password string) (user *model.User, err *model.AppError) {
+	productUser, err := a.getTheUserFromProduct(loginId, password)
+	if err != nil {
+		a.Log().Warn("1")
+		return nil, err
+	}
+
+	user = &model.User{
+		Username:            productUser.Username,
+		Email:               productUser.Email,
+		Password:            password,
+		FirstName:           productUser.FirstName,
+		LastName:            productUser.LastName,
+		Locale:              "en",
+		EmailVerified:       true,
+		DisableWelcomeEmail: true,
+	}
+
+	if user, err = a.CreateUser(rctx, user); err != nil {
+		a.Log().Warn(err.Message)
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (a *App) getTheUserFromProduct(username, password string) (productUser ProductUser, err *model.AppError) {
 	client := http.Client{}
-	jsonStr := []byte(`{"username":"` + user.Username + `", "password":"` + password + `"}`)
+	productUser = ProductUser{}
+	jsonStr := []byte(`{"username":"` + username + `", "password":"` + password + `"}`)
 	url := "https://aqader.classera.com/test/mm_login"
 	req, reqErr := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
 	if reqErr != nil {
-		return nil, nil
+		a.Log().Warn("2")
+		return productUser, err
 	}
 
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
 	resp, resErr := client.Do(req)
 	if resErr != nil {
-		return nil, nil
+		a.Log().Warn("3")
+		return productUser, err
 	}
-	userInfo := resp.Body.Close()
-	fmt.Print(userInfo)
 
-	return user, nil
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			a.Log().Warn("4")
+		}
+	}(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
+	a.Log().Warn(string(body))
+	err2 := json.Unmarshal(body, &productUser)
+	if err2 != nil {
+		a.Log().Warn("5")
+		return ProductUser{}, nil
+	}
+
+	return productUser, nil
 }
 
 func (a *App) authenticateUser(rctx request.CTX, user *model.User, password, mfaToken string) (*model.User, *model.AppError) {
