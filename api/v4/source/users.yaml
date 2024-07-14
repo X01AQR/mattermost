@@ -40,6 +40,32 @@
           $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
+      get:
+        tags:
+          - users
+        summary: Redirect with the user object to authenticate user
+        description: >
+          ##### Permissions
+
+          No permission required
+        operationId: LoginByRedirect
+        parameters:
+          - name: user
+            in: query
+            description: The encoded user object.
+            required: true
+            schema:
+              type: string
+        responses:
+          "302":
+            description: Login successful, it'll redirect to login page to perform the autologin
+          "400":
+            $ref: "#/components/responses/BadRequest"
+          "401":
+            $ref: "#/components/responses/Unauthorized"
+          "403":
+            $ref: "#/components/responses/Forbidden"
+
   /api/v4/users/login/cws:
     post:
       tags:
