@@ -1846,20 +1846,19 @@ func authorizeUserObject(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	redirectURL := *c.App.Config().ServiceSettings.SiteURL
 	isMobileDevice := utils.IsMobileRequest(r)
 	session, err3 := c.App.DoLogin(c.AppContext, w, r, user, "", isMobileDevice, false, false)
 	if err3 != nil {
 		c.LogErrorByCode(err3)
-		http.Redirect(w, r, *c.App.Config().ServiceSettings.SiteURL, http.StatusFound)
+		http.Redirect(w, r, redirectURL, http.StatusFound)
 		return
 	}
 	c.AppContext = c.AppContext.WithSession(session)
 	c.LogAuditWithUserId(user.Id, "success")
 	c.App.AttachSessionCookies(c.AppContext, w, r)
 
-	redirectURL := *c.App.Config().ServiceSettings.SiteURL
-
-	http.Redirect(w, r, "/", http.StatusFound)
+	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
 func login(c *Context, w http.ResponseWriter, r *http.Request) {
