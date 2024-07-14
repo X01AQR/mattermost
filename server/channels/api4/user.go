@@ -4,6 +4,7 @@
 package api4
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -62,6 +63,7 @@ func (api *API) InitUser() {
 	api.BaseRoutes.User.Handle("/mfa/generate", api.APISessionRequiredMfa(generateMfaSecret)).Methods("POST")
 
 	api.BaseRoutes.Users.Handle("/login", api.APIHandler(login)).Methods("POST")
+	api.BaseRoutes.Users.Handle("/login", api.APIHandler(authorizeUserObject)).Methods("GET")
 	api.BaseRoutes.Users.Handle("/login/desktop_token", api.RateLimitedHandler(api.APIHandler(loginWithDesktopToken), model.RateLimitSettings{PerSec: model.NewInt(2), MaxBurst: model.NewInt(1)})).Methods("POST")
 	api.BaseRoutes.Users.Handle("/login/switch", api.APIHandler(switchAccountType)).Methods("POST")
 	api.BaseRoutes.Users.Handle("/login/cws", api.APIHandlerTrustRequester(loginCWS)).Methods("POST")
@@ -1813,6 +1815,51 @@ func sendPasswordReset(c *Context, w http.ResponseWriter, r *http.Request) {
 		c.LogAudit("sent=" + email)
 	}
 	ReturnStatusOK(w)
+}
+
+type UserObject struct {
+	Id            string `json:"id"`
+	Username      string `json:"username"`
+	Email         string `json:"email"`
+	Password      string `json:"password"`
+	FirstName     string `json:"first_name"`
+	LastName      string `json:"family_name"`
+	EmailVerified bool   `json:"verified_email"`
+}
+
+func authorizeUserObject(c *Context, w http.ResponseWriter, r *http.Request) {
+	userParams, err := base64.StdEncoding.DecodeString(r.URL.Query().Get("user"))
+	if err != nil {
+		return
+	}
+
+	userObject := UserObject{}
+	err = json.Unmarshal(userParams, &userObject)
+	if err != nil {
+		return
+	}
+	c.Logger.Warn(userObject.Username)
+	// Create user
+	user, err2 := c.App.GetUserForLogin(c.AppContext, "j59s9wuy6ida5khr18b57ts8hh", userObject.Username)
+	if err2 != nil {
+		c.Logger.Warn(err2.Error())
+		return
+	}
+
+	isMobileDevice := utils.IsMobileRequest(r)
+	session, err3 := c.App.DoLogin(c.AppContext, w, r, user, "", isMobileDevice, false, false)
+	if err3 != nil {
+		c.LogErrorByCode(err3)
+		http.Redirect(w, r, *c.App.Config().ServiceSettings.SiteURL, http.StatusFound)
+		return
+	}
+	c.AppContext = c.AppContext.WithSession(session)
+	c.LogAuditWithUserId(user.Id, "success")
+	c.App.AttachSessionCookies(c.AppContext, w, r)
+
+	redirectURL := *c.App.Config().ServiceSettings.SiteURL
+
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 func login(c *Context, w http.ResponseWriter, r *http.Request) {

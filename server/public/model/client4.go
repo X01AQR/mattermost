@@ -803,6 +803,12 @@ func (c *Client4) Login(ctx context.Context, loginId string, password string) (*
 	return c.login(ctx, m)
 }
 
+func (c *Client4) LoginByRedirect(ctx context.Context, user string) (*User, *Response, error) {
+	m := make(map[string]string)
+	m["user"] = user
+	return c.redirectLogin(ctx, m)
+}
+
 // LoginByLdap authenticates a user by LDAP id and password.
 func (c *Client4) LoginByLdap(ctx context.Context, loginId string, password string) (*User, *Response, error) {
 	m := make(map[string]string)
@@ -834,6 +840,22 @@ func (c *Client4) LoginWithMFA(ctx context.Context, loginId, password, mfaToken 
 
 func (c *Client4) login(ctx context.Context, m map[string]string) (*User, *Response, error) {
 	r, err := c.DoAPIPost(ctx, "/users/login", MapToJSON(m))
+	if err != nil {
+		return nil, BuildResponse(r), err
+	}
+	defer closeBody(r)
+	c.AuthToken = r.Header.Get(HeaderToken)
+	c.AuthType = HeaderBearer
+
+	var user User
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		return nil, nil, NewAppError("login", "api.unmarshal_error", nil, "", http.StatusInternalServerError).Wrap(err)
+	}
+	return &user, BuildResponse(r), nil
+}
+
+func (c *Client4) redirectLogin(ctx context.Context, m map[string]string) (*User, *Response, error) {
+	r, err := c.DoAPIGet(ctx, "/users/login", MapToJSON(m))
 	if err != nil {
 		return nil, BuildResponse(r), err
 	}
