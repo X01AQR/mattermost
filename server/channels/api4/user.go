@@ -1821,6 +1821,7 @@ func authorizeUserObject(c *Context, w http.ResponseWriter, r *http.Request) {
 	//TODO: OpenSSL decrypt the object
 	userParams, err := base64.StdEncoding.DecodeString(r.URL.Query().Get("user"))
 	if err != nil {
+		c.Logger.Warn(err.Error())
 		c.Err = model.NewAppError("login", "api.user.login.invalid_credentials_sso", nil, "", http.StatusUnauthorized)
 		return
 	}
@@ -1828,12 +1829,15 @@ func authorizeUserObject(c *Context, w http.ResponseWriter, r *http.Request) {
 	productUser := model.ProductUser{}
 	err = json.Unmarshal(userParams, &productUser)
 	if err != nil {
+		c.Logger.Warn(err.Error())
 		return
 	}
 
-	user, err2 := c.App.GetUserForLogin(c.AppContext, c.AppContext.RequestId(), productUser.Username)
+	user, err2 := c.App.GetUserForLogin(c.AppContext, "", productUser.Username)
 	if err2 != nil {
+		c.Logger.Warn(err2.Error())
 		if user, err = c.App.SyncTheProductUser(c.AppContext, productUser); err != nil {
+			c.Logger.Warn(err.Error())
 			return
 		}
 	}
