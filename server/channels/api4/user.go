@@ -1825,7 +1825,7 @@ func authorizeUserObject(c *Context, w http.ResponseWriter, r *http.Request) {
 		c.Err = model.NewAppError("login", "api.user.login.invalid_credentials_sso", nil, "", http.StatusUnauthorized)
 		return
 	}
-
+	c.Logger.Warn(string(userParams))
 	productUser := model.ProductUser{}
 	err = json.Unmarshal(userParams, &productUser)
 	if err != nil {

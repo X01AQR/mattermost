@@ -461,7 +461,6 @@ type AppIface interface {
 	AttachSessionCookies(c request.CTX, w http.ResponseWriter, r *http.Request)
 	AuthenticateUserForLogin(c request.CTX, id, loginId, password, mfaToken, cwsToken string, ldapOnly bool) (user *model.User, err *model.AppError)
 	SyncTheProductUser(c request.CTX, productUser model.ProductUser) (user *model.User, err *model.AppError)
-	GetTeamByUniqueFields(teamID, teamName string) (team *model.Team, err *model.AppError)
 	AuthorizeOAuthUser(c request.CTX, w http.ResponseWriter, r *http.Request, service, code, state, redirectURI string) (io.ReadCloser, string, map[string]string, *model.User, *model.AppError)
 	AutocompleteChannels(c request.CTX, userID, term string) (model.ChannelListWithTeamData, *model.AppError)
 	AutocompleteChannelsForSearch(c request.CTX, teamID string, userID string, term string) (model.ChannelList, *model.AppError)
