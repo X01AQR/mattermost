@@ -4,15 +4,12 @@
 package app
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/mattermost/mattermost/server/public/shared/mlog"
 	"github.com/mattermost/mattermost/server/public/shared/request"
 	"github.com/mattermost/mattermost/server/v8/channels/app/users"
 	"github.com/mattermost/mattermost/server/v8/platform/shared/mfa"
-	"io"
 	"net/http"
 	"strings"
 )
@@ -249,25 +246,23 @@ func checkUserNotBot(user *model.User) *model.AppError {
 }
 
 type ProductUser struct {
-	Id            string `json:"id"`
-	Username      string `json:"username"`
-	Email         string `json:"email"`
-	FirstName     string `json:"first_name"`
-	LastName      string `json:"family_name"`
-	EmailVerified bool   `json:"verified_email"`
+	Id              string `json:"id"`
+	Username        string `json:"username"`
+	Email           string `json:"email"`
+	Password        string `json:"password"`
+	FirstName       string `json:"first_name"`
+	LastName        string `json:"family_name"`
+	EmailVerified   bool   `json:"verified_email"`
+	TeamId          string `json:"team_id"`
+	TeamName        string `json:"school_id"`
+	TeamDisplayName string `json:"team_display_name"`
 }
 
-func (a *App) onDemandMigration(rctx request.CTX, loginId, password string) (user *model.User, err *model.AppError) {
-	productUser, err := a.getTheUserFromProduct(loginId, password)
-	if err != nil {
-		a.Log().Warn("1")
-		return nil, err
-	}
-
+func (a *App) syncTheProductUser(rctx request.CTX, productUser ProductUser) (user *model.User, err *model.AppError) {
 	user = &model.User{
 		Username:            productUser.Username,
 		Email:               productUser.Email,
-		Password:            password,
+		Password:            productUser.Password,
 		FirstName:           productUser.FirstName,
 		LastName:            productUser.LastName,
 		Locale:              "en",
@@ -276,47 +271,42 @@ func (a *App) onDemandMigration(rctx request.CTX, loginId, password string) (use
 	}
 
 	if user, err = a.CreateUser(rctx, user); err != nil {
-		a.Log().Warn(err.Message)
 		return nil, err
 	}
+
+	team, fetchTeamErr := a.getTeam(productUser.TeamId, productUser.TeamName)
+	if fetchTeamErr != nil {
+		team = &model.Team{
+			Name:            productUser.TeamName,
+			DisplayName:     productUser.TeamDisplayName,
+			Type:            model.TeamInvite,
+			AllowOpenInvite: false,
+		}
+
+		if team, err = a.CreateTeam(rctx, team); err != nil {
+			return nil, err
+		}
+	}
+
+	team, _, err = a.AddUserToTeam(rctx, team.Id, user.Id, rctx.RequestId())
 
 	return user, nil
 }
 
-func (a *App) getTheUserFromProduct(username, password string) (productUser ProductUser, err *model.AppError) {
-	client := http.Client{}
-	productUser = ProductUser{}
-	jsonStr := []byte(`{"username":"` + username + `", "password":"` + password + `"}`)
-	url := "https://aqader.classera.com/test/mm_login"
-	req, reqErr := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
-	if reqErr != nil {
-		a.Log().Warn("2")
-		return productUser, err
-	}
-
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
-	resp, resErr := client.Do(req)
-	if resErr != nil {
-		a.Log().Warn("3")
-		return productUser, err
-	}
-
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
+func (a *App) getTeam(teamID, teamName string) (team *model.Team, err *model.AppError) {
+	if teamID != "" {
+		team, err = a.GetTeam(teamID)
 		if err != nil {
-			a.Log().Warn("4")
+			return nil, err
 		}
-	}(resp.Body)
-	body, _ := io.ReadAll(resp.Body)
-	a.Log().Warn(string(body))
-	err2 := json.Unmarshal(body, &productUser)
-	if err2 != nil {
-		a.Log().Warn("5")
-		return ProductUser{}, nil
+	} else {
+		team, err = a.GetTeamByName(teamName)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return productUser, nil
+	return team, nil
 }
 
 func (a *App) authenticateUser(rctx request.CTX, user *model.User, password, mfaToken string) (*model.User, *model.AppError) {
