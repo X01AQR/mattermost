@@ -350,3 +350,54 @@ func GetProtocol(r *http.Request) string {
 func IsCWSLogin(a *App, token string) bool {
 	return a.License().IsCloud() && token != ""
 }
+
+func (a *App) SyncTheProductUser(c request.CTX, productUser model.ProductUser) (user *model.User, err *model.AppError) {
+	user = &model.User{
+		Username:            productUser.Username,
+		Email:               productUser.Email,
+		Password:            productUser.Password,
+		FirstName:           productUser.FirstName,
+		LastName:            productUser.LastName,
+		Locale:              "en",
+		EmailVerified:       true,
+		DisableWelcomeEmail: true,
+	}
+
+	if user, err = a.CreateUser(c, user); err != nil {
+		return nil, err
+	}
+
+	team, fetchTeamErr := a.GetTeamByUniqueFields(productUser.TeamId, productUser.TeamName)
+	if fetchTeamErr != nil {
+		team = &model.Team{
+			Name:            productUser.TeamName,
+			DisplayName:     productUser.TeamDisplayName,
+			Type:            model.TeamInvite,
+			AllowOpenInvite: false,
+		}
+
+		if team, err = a.CreateTeam(c, team); err != nil {
+			return nil, err
+		}
+	}
+
+	team, _, err = a.AddUserToTeam(c, team.Id, user.Id, c.RequestId())
+
+	return user, nil
+}
+
+func (a *App) GetTeamByUniqueFields(teamID, teamName string) (team *model.Team, err *model.AppError) {
+	if teamID != "" {
+		team, err = a.GetTeam(teamID)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		team, err = a.GetTeamByName(teamName)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return team, nil
+}
