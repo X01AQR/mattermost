@@ -1818,8 +1818,10 @@ func sendPasswordReset(c *Context, w http.ResponseWriter, r *http.Request) {
 }
 
 func authorizeUserObject(c *Context, w http.ResponseWriter, r *http.Request) {
+	//TODO: OpenSSL decrypt the object
 	userParams, err := base64.StdEncoding.DecodeString(r.URL.Query().Get("user"))
 	if err != nil {
+		c.Err = model.NewAppError("login", "api.user.login.invalid_credentials_sso", nil, "", http.StatusUnauthorized)
 		return
 	}
 
