@@ -1825,7 +1825,7 @@ func authorizeUserObject(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	productUser := app.ProductUser{}
+	productUser := model.ProductUser{}
 	err = json.Unmarshal(userParams, &productUser)
 	if err != nil {
 		return
