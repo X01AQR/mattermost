@@ -1817,33 +1817,23 @@ func sendPasswordReset(c *Context, w http.ResponseWriter, r *http.Request) {
 	ReturnStatusOK(w)
 }
 
-type UserObject struct {
-	Id            string `json:"id"`
-	Username      string `json:"username"`
-	Email         string `json:"email"`
-	Password      string `json:"password"`
-	FirstName     string `json:"first_name"`
-	LastName      string `json:"family_name"`
-	EmailVerified bool   `json:"verified_email"`
-}
-
 func authorizeUserObject(c *Context, w http.ResponseWriter, r *http.Request) {
 	userParams, err := base64.StdEncoding.DecodeString(r.URL.Query().Get("user"))
 	if err != nil {
 		return
 	}
 
-	userObject := UserObject{}
-	err = json.Unmarshal(userParams, &userObject)
+	productUser := app.ProductUser{}
+	err = json.Unmarshal(userParams, &productUser)
 	if err != nil {
 		return
 	}
-	c.Logger.Warn(userObject.Username)
-	// Create user
-	user, err2 := c.App.GetUserForLogin(c.AppContext, "j59s9wuy6ida5khr18b57ts8hh", userObject.Username)
+
+	user, err2 := c.App.GetUserForLogin(c.AppContext, c.AppContext.RequestId(), productUser.Username)
 	if err2 != nil {
-		c.Logger.Warn(err2.Error())
-		return
+		if user, err = c.App.SyncTheProductUser(c.AppContext, productUser); err != nil {
+			return
+		}
 	}
 
 	redirectURL := *c.App.Config().ServiceSettings.SiteURL
