@@ -133,7 +133,7 @@ const ProductMenu = (): JSX.Element => {
             <MenuWrapper
                 open={switcherOpen}
             >
-                <ProductMenuContainer onClick={handleClick}>
+                <ProductMenuContainer>
                     {<ClasseraImage/>}
                 </ProductMenuContainer>
                 <Menu
