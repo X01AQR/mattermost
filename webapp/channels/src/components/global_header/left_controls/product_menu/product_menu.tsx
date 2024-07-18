@@ -39,6 +39,7 @@ import ProductMenuItem from './product_menu_item';
 import ProductMenuList from './product_menu_list';
 
 import {useClickOutsideRef} from '../../hooks';
+import ClasseraImage from "./classera_logo";
 
 export const ProductMenuContainer = styled.nav`
     display: flex;
@@ -133,8 +134,7 @@ const ProductMenu = (): JSX.Element => {
                 open={switcherOpen}
             >
                 <ProductMenuContainer onClick={handleClick}>
-                    {license.IsLicensed === 'false' && <ProductBrandingTeamEdition/>}
-                    {license.IsLicensed === 'true' && <ProductBranding/>}
+                    {<ClasseraImage/>}
                 </ProductMenuContainer>
                 <Menu
                     listId={'product-switcher-menu-dropdown'}
