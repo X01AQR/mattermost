@@ -133,12 +133,6 @@ const ProductMenu = (): JSX.Element => {
                 open={switcherOpen}
             >
                 <ProductMenuContainer onClick={handleClick}>
-                    <ProductMenuButton
-                        active={switcherOpen}
-                        aria-expanded={switcherOpen}
-                        aria-label={formatMessage({id: 'global_header.productSwitchMenu', defaultMessage: 'Product switch menu'})}
-                        aria-controls='product-switcher-menu'
-                    />
                     {license.IsLicensed === 'false' && <ProductBrandingTeamEdition/>}
                     {license.IsLicensed === 'true' && <ProductBranding/>}
                 </ProductMenuContainer>
