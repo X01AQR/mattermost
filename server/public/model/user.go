@@ -112,16 +112,14 @@ type User struct {
 }
 
 type ProductUser struct {
-	Id              string `json:"id"`
-	Username        string `json:"username"`
-	Email           string `json:"email"`
-	Password        string `json:"password"`
-	FirstName       string `json:"first_name"`
-	LastName        string `json:"family_name"`
-	EmailVerified   bool   `json:"verified_email"`
-	TeamId          string `json:"team_id"`
-	TeamName        string `json:"school_id"`
-	TeamDisplayName string `json:"team_display_name"`
+	Id            string `json:"id"`
+	Username      string `json:"username"`
+	Email         string `json:"email"`
+	Password      string `json:"password"`
+	FirstName     string `json:"first_name"`
+	LastName      string `json:"family_name"`
+	EmailVerified bool   `json:"verified_email"`
+	TeamId        string `json:"team_id"`
 }
 
 func (u *User) Auditable() map[string]interface{} {
