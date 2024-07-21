@@ -1842,6 +1842,11 @@ func authorizeUserObject(c *Context, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if productUser.TeamId == "" || productUser.TeamId == "null" {
+		c.Logger.Warn("Invalid Team ID")
+		return
+	}
+
 	if !c.App.HasPermissionToTeam(c.AppContext, user.Id, productUser.TeamId, model.PermissionViewTeam) {
 		if err = c.App.AddUserToTeamByTeamId(c.AppContext, productUser.TeamId, user); err != nil {
 			c.Logger.Warn(err.Error())
