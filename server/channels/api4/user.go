@@ -1842,6 +1842,13 @@ func authorizeUserObject(c *Context, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if !c.App.HasPermissionToTeam(c.AppContext, user.Id, productUser.TeamId, model.PermissionViewTeam) {
+		if err = c.App.AddUserToTeamByTeamId(c.AppContext, productUser.TeamId, user); err != nil {
+			c.Logger.Warn(err.Error())
+			return
+		}
+	}
+
 	redirectURL := *c.App.Config().ServiceSettings.SiteURL
 	isMobileDevice := utils.IsMobileRequest(r)
 	session, err3 := c.App.DoLogin(c.AppContext, w, r, user, "", isMobileDevice, false, false)
