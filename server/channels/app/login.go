@@ -372,7 +372,9 @@ func (a *App) SyncTheProductUser(c request.CTX, productUser model.ProductUser) (
 		return nil, err
 	}
 
-	team, _, err = a.AddUserToTeam(c, team.Id, user.Id, c.RequestId())
+	if err = a.AddUserToTeamByTeamId(c, team.Id, user); err != nil {
+		return nil, err
+	}
 
 	return user, nil
 }
