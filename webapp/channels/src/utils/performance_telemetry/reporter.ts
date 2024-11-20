@@ -2,19 +2,22 @@
 // See LICENSE.txt for license information.
 
 import type {Store} from 'redux';
-import {onCLS, onFCP, onINP, onLCP, onTTFB} from 'web-vitals';
-import type {Metric} from 'web-vitals';
+import {onCLS, onFCP, onINP, onLCP, onTTFB} from 'web-vitals/attribution';
+import type {INPMetricWithAttribution, LCPMetricWithAttribution, Metric} from 'web-vitals/attribution';
 
 import type {Client4} from '@mattermost/client';
 
 import {getConfig} from 'mattermost-redux/selectors/entities/general';
 import {getCurrentUserId} from 'mattermost-redux/selectors/entities/users';
 
+import type {DesktopAppAPI} from 'utils/desktop_api';
+
 import type {GlobalState} from 'types/store';
 
+import {identifyElementRegion} from './element_identification';
 import type {PerformanceLongTaskTiming} from './long_task';
 import type {PlatformLabel, UserAgentLabel} from './platform_detection';
-import {getPlatformLabel, getUserAgentLabel} from './platform_detection';
+import {getDesktopAppVersionLabel, getPlatformLabel, getUserAgentLabel} from './platform_detection';
 
 import {Measure} from '.';
 
@@ -37,6 +40,12 @@ type PerformanceReportMeasure = {
      * use floating point numbers for performance timestamps, so we need to make sure to round this.
      */
     timestamp: number;
+
+    /**
+     * labels is an optional map of extra labels to attach to the measure. They must be supported constants as defined
+     * in model/metrics.go on the server.
+     */
+    labels?: Record<string, string>;
 }
 
 type PerformanceReport = {
@@ -45,6 +54,7 @@ type PerformanceReport = {
     labels: {
         platform: PlatformLabel;
         agent: UserAgentLabel;
+        desktop_app_version?: string;
     };
 
     start: number;
@@ -58,8 +68,12 @@ export default class PerformanceReporter {
     private client: Client4;
     private store: Store<GlobalState>;
 
+    private desktopAPI: DesktopAppAPI;
+    private desktopOffListener?: () => void;
+
     private platformLabel: PlatformLabel;
     private userAgentLabel: UserAgentLabel;
+    private desktopAppVersion?: string;
 
     private counters: Map<string, number>;
     private histogramMeasures: PerformanceReportMeasure[];
@@ -71,12 +85,16 @@ export default class PerformanceReporter {
     protected reportPeriodBase = 60 * 1000;
     protected reportPeriodJitter = 15 * 1000;
 
-    constructor(client: Client4, store: Store<GlobalState>) {
+    constructor(client: Client4, store: Store<GlobalState>, desktopAPI: DesktopAppAPI) {
         this.client = client;
         this.store = store;
+        this.desktopAPI = desktopAPI;
 
         this.platformLabel = getPlatformLabel();
         this.userAgentLabel = getUserAgentLabel();
+
+        // We want to submit by prerelease version if it exists, so we don't muddy up the metrics for the release builds
+        this.desktopAppVersion = getDesktopAppVersionLabel(desktopAPI.getAppVersion(), desktopAPI.getPrereleaseVersion());
 
         this.counters = new Map();
         this.histogramMeasures = [];
@@ -114,6 +132,10 @@ export default class PerformanceReporter {
         // Send any remaining metrics when the page becomes hidden rather than when it's unloaded because that's
         // what's recommended by various sites due to unload handlers being unreliable, particularly on mobile.
         addEventListener('visibilitychange', this.handleVisibilityChange);
+
+        if (!this.desktopAPI.isDev()) {
+            this.desktopOffListener = this.desktopAPI.onReceiveMetrics((metrics) => this.collectDesktopAppMetrics(metrics));
+        }
     }
 
     private measurePageLoad() {
@@ -140,6 +162,8 @@ export default class PerformanceReporter {
         this.reportTimeout = undefined;
 
         this.observer.disconnect();
+
+        this.desktopOffListener?.();
     }
 
     protected handleObservations(list: PerformanceObserverEntryList) {
@@ -162,6 +186,7 @@ export default class PerformanceReporter {
         this.histogramMeasures.push({
             metric: entry.name,
             value: entry.duration,
+            labels: entry.detail.labels,
             timestamp: Date.now(),
         });
     }
@@ -184,10 +209,28 @@ export default class PerformanceReporter {
     }
 
     private handleWebVital(metric: Metric) {
+        let labels: Record<string, string> | undefined;
+
+        if (isLCPMetric(metric)) {
+            const selector = metric.attribution?.element;
+            const element = selector ? document.querySelector(selector) : null;
+
+            if (element) {
+                labels = {
+                    region: identifyElementRegion(element),
+                };
+            }
+        } else if (isINPMetric(metric)) {
+            labels = {
+                interaction: metric.attribution?.interactionType,
+            };
+        }
+
         this.histogramMeasures.push({
             metric: metric.name,
             value: metric.value,
             timestamp: Date.now(),
+            labels,
         });
     }
 
@@ -243,7 +286,7 @@ export default class PerformanceReporter {
     }
 
     private generateReport(histogramMeasures: PerformanceReportMeasure[], counters: Map<string, number>): PerformanceReport {
-        const now = performance.timeOrigin + performance.now();
+        const now = Date.now();
 
         const counterMeasures = this.countersToMeasures(now, counters);
 
@@ -253,6 +296,7 @@ export default class PerformanceReporter {
             labels: {
                 platform: this.platformLabel,
                 agent: this.userAgentLabel,
+                desktop_app_version: this.desktopAppVersion,
             },
 
             ...this.getReportStartEnd(now, histogramMeasures, counterMeasures),
@@ -264,7 +308,7 @@ export default class PerformanceReporter {
 
     private getReportStartEnd(now: number, histogramMeasures: PerformanceReportMeasure[], counterMeasures: PerformanceReportMeasure[]): {start: number; end: number} {
         let start = now;
-        let end = performance.timeOrigin;
+        let end = 0;
 
         for (const measure of histogramMeasures) {
             start = Math.min(start, measure.timestamp);
@@ -315,6 +359,35 @@ export default class PerformanceReporter {
 
         return navigator.sendBeacon(url, data);
     }
+
+    protected collectDesktopAppMetrics(metricsMap: Map<string, {cpu?: number; memory?: number}>) {
+        const now = Date.now();
+
+        for (const [processName, metrics] of metricsMap.entries()) {
+            let process = processName;
+            if (process.startsWith('Server ')) {
+                process = 'Server';
+            }
+
+            if (metrics.cpu) {
+                this.histogramMeasures.push({
+                    metric: 'desktop_cpu',
+                    timestamp: now,
+                    labels: {process},
+                    value: metrics.cpu,
+                });
+            }
+
+            if (metrics.memory) {
+                this.histogramMeasures.push({
+                    metric: 'desktop_memory',
+                    timestamp: now,
+                    labels: {process},
+                    value: metrics.memory,
+                });
+            }
+        }
+    }
 }
 
 function isPerformanceLongTask(entry: PerformanceEntry): entry is PerformanceLongTaskTiming {
@@ -327,4 +400,12 @@ function isPerformanceMark(entry: PerformanceEntry): entry is PerformanceMark {
 
 function isPerformanceMeasure(entry: PerformanceEntry): entry is PerformanceMeasure {
     return entry.entryType === 'measure';
+}
+
+function isLCPMetric(entry: Metric): entry is LCPMetricWithAttribution {
+    return entry.name === 'LCP';
+}
+
+function isINPMetric(entry: Metric): entry is INPMetricWithAttribution {
+    return entry.name === 'INP';
 }

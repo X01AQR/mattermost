@@ -97,6 +97,7 @@ const state: GlobalState = {
         },
         preferences: {
             myPreferences: {},
+            userPreferences: {},
         },
         bots: {
             accounts: {},
@@ -124,6 +125,7 @@ const state: GlobalState = {
         },
         integrations: {
             incomingHooks: {},
+            incomingHooksTotalCount: 0,
             outgoingHooks: {},
             oauthApps: {},
             systemCommands: {},
@@ -209,6 +211,12 @@ const state: GlobalState = {
                 teamsLoaded: false,
             },
         },
+        scheduledPosts: {
+            byId: {},
+            byTeamId: {},
+            errorsByTeamId: {},
+            byChannelOrThreadId: {},
+        },
     },
     errors: [],
     requests: {
@@ -251,10 +259,6 @@ const state: GlobalState = {
             },
         },
         teams: {
-            getMyTeams: {
-                status: 'not_started',
-                error: null,
-            },
             getTeams: {
                 status: 'not_started',
                 error: null,

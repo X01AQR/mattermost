@@ -25,6 +25,7 @@ import type {
     TeamsRequestsStatuses, UsersRequestsStatuses,
 } from './requests';
 import type {Role} from './roles';
+import type {ScheduledPostsState} from './schedule_post';
 import type {SchemesState} from './schemes';
 import type {SearchState} from './search';
 import type {TeamsState} from './teams';
@@ -49,6 +50,11 @@ export type GlobalState = {
             myPreferences: {
                 [x: string]: PreferenceType;
             };
+            userPreferences: {
+                [userID: string]: {
+                    [x: string]: PreferenceType;
+                };
+            };
         };
         admin: AdminState;
         jobs: JobsState;
@@ -70,6 +76,7 @@ export type GlobalState = {
         cloud: CloudState;
         hostedCustomer: HostedCustomerState;
         usage: CloudUsage;
+        scheduledPosts: ScheduledPostsState;
     };
     errors: any[];
     requests: {

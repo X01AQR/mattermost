@@ -19,14 +19,21 @@ import {
 } from 'mattermost-redux/actions/search';
 import {getCurrentChannelId, getCurrentChannelNameForSearchShortcut, getChannel as getChannelSelector} from 'mattermost-redux/selectors/entities/channels';
 import {getConfig} from 'mattermost-redux/selectors/entities/general';
-import {getPost} from 'mattermost-redux/selectors/entities/posts';
+import {getLatestInteractablePostId, getPost} from 'mattermost-redux/selectors/entities/posts';
 import {getCurrentTeamId} from 'mattermost-redux/selectors/entities/teams';
 import {getCurrentTimezone} from 'mattermost-redux/selectors/entities/timezone';
 import {getCurrentUser, getCurrentUserMentionKeys} from 'mattermost-redux/selectors/entities/users';
 import type {ActionFunc, ActionFuncAsync, ThunkActionFunc} from 'mattermost-redux/types/actions';
 
 import {trackEvent} from 'actions/telemetry_actions.jsx';
-import {getSearchTerms, getRhsState, getPluggableId, getFilesSearchExtFilter, getPreviousRhsState} from 'selectors/rhs';
+import {
+    getSearchType,
+    getSearchTerms,
+    getRhsState,
+    getPluggableId,
+    getFilesSearchExtFilter,
+    getPreviousRhsState,
+} from 'selectors/rhs';
 
 import {SidebarSize} from 'components/resizable_sidebar/constants';
 
@@ -122,6 +129,14 @@ export function selectPostFromRightHandSideSearchByPostId(postId: string): Actio
     };
 }
 
+export function replyToLatestPostInChannel(channelId: string): ActionFuncAsync<boolean, GlobalState> {
+    return async (dispatch, getState) => {
+        const state = getState();
+        const postId = getLatestInteractablePostId(state, channelId);
+        return dispatch(selectPostFromRightHandSideSearchByPostId(postId));
+    };
+}
+
 export function updateSearchTerms(terms: string) {
     return {
         type: ActionTypes.UPDATE_RHS_SEARCH_TERMS,
@@ -179,6 +194,13 @@ function updateSearchResultsTerms(terms: string) {
     };
 }
 
+function updateSearchResultsType(searchType: string) {
+    return {
+        type: ActionTypes.UPDATE_RHS_SEARCH_RESULTS_TYPE,
+        searchType,
+    };
+}
+
 export function performSearch(terms: string, isMentionSearch?: boolean): ThunkActionFunc<unknown, GlobalState> {
     return (dispatch, getState) => {
         let searchTerms = terms;
@@ -194,16 +216,18 @@ export function performSearch(terms: string, isMentionSearch?: boolean): ThunkAc
         }
 
         if (isMentionSearch) {
-            // Username should be quoted to allow specific search
-            // in case username is made with multiple words splitted by dashes or other symbols.
+            // Username and FirstName should be quoted to allow specific search
+            // in case the name is made with multiple words splitted by dashes or other symbols.
             const user = getCurrentUser(getState());
             const termsArr = searchTerms.split(' ').filter((t) => Boolean(t && t.trim()));
-            const username = '@' + user.username;
-            const quotedUsername = `"${username}"`;
+            const atUsername = '@' + user.username;
             for (let i = 0; i < termsArr.length; i++) {
-                if (termsArr[i] === username) {
-                    termsArr[i] = quotedUsername;
-                    break;
+                if (termsArr[i] === atUsername) {
+                    termsArr[i] = `"${atUsername}"`;
+                } else if (termsArr[i] === user.username) {
+                    termsArr[i] = `"${user.username}"`;
+                } else if (termsArr[i] === user.first_name) {
+                    termsArr[i] = `"${user.first_name}"`;
                 }
             }
             searchTerms = termsArr.join(' ');
@@ -230,6 +254,7 @@ export function showSearchResults(isMentionSearch = false): ThunkActionFunc<unkn
         const state = getState();
 
         const searchTerms = getSearchTerms(state);
+        const searchType = getSearchType(state);
 
         if (isMentionSearch) {
             dispatch(updateRhsState(RHSStates.MENTION));
@@ -237,6 +262,7 @@ export function showSearchResults(isMentionSearch = false): ThunkActionFunc<unkn
             dispatch(updateRhsState(RHSStates.SEARCH));
         }
         dispatch(updateSearchResultsTerms(searchTerms));
+        dispatch(updateSearchResultsType(searchType));
 
         return dispatch(performSearch(searchTerms));
     };
@@ -529,8 +555,8 @@ export function selectPost(post: Post, previousRhsState?: RhsState) {
 export function selectPostById(postId: string): ActionFuncAsync {
     return async (dispatch, getState) => {
         const state = getState();
-        const post = getPost(state, postId) ?? (await dispatch(fetchPost(postId))).data;
-        if (post) {
+        const post: Post | undefined = getPost(state, postId) ?? (await dispatch(fetchPost(postId))).data;
+        if (post && post.state !== 'DELETED' && post.delete_at === 0) {
             const channel = getChannelSelector(state, post.channel_id);
             if (!channel) {
                 await dispatch(getChannel(post.channel_id));
@@ -648,7 +674,11 @@ export function setEditChannelMembers(active: boolean) {
 
 export function measureRhsOpened() {
     return () => {
-        measureAndReport(Measure.RhsLoad, Mark.PostSelected, undefined, true);
+        measureAndReport({
+            name: Measure.RhsLoad,
+            startMark: Mark.PostSelected,
+            canFail: true,
+        });
 
         performance.clearMarks(Mark.PostSelected);
     };

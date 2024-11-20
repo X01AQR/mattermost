@@ -5,22 +5,18 @@ import React from 'react';
 
 import WithTooltip from 'components/with_tooltip';
 
-interface Props {
+export interface Props {
+    children: React.ReactNode;
     name: string;
     imageUrl: string;
 }
-declare module 'react' {
-    interface HTMLAttributes<T> extends AriaAttributes, DOMAttributes<T> {
-        alt?: string;
-    }
-}
 
-const PostEmoji = ({name, imageUrl}: Props) => {
+const PostEmoji = ({children, name, imageUrl}: Props) => {
     const emojiText = `:${name}:`;
     const backgroundImageUrl = `url(${imageUrl})`;
 
     if (!imageUrl) {
-        return <>{emojiText}</>;
+        return <>{children}</>;
     }
 
     return (
@@ -32,12 +28,11 @@ const PostEmoji = ({name, imageUrl}: Props) => {
             placement='top'
         >
             <span
-                alt={emojiText}
                 className='emoticon'
                 data-testid={`postEmoji.${emojiText}`}
                 style={{backgroundImage: backgroundImageUrl}}
             >
-                {emojiText}
+                {children}
             </span>
         </WithTooltip>
     );

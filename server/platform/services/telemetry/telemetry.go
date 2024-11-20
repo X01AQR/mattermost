@@ -42,54 +42,80 @@ const (
 
 	EnvVarInstallType = "MM_INSTALL_TYPE"
 
-	TrackConfigService           = "config_service"
-	TrackConfigTeam              = "config_team"
-	TrackConfigClientReq         = "config_client_requirements"
-	TrackConfigSQL               = "config_sql"
-	TrackConfigLog               = "config_log"
-	TrackConfigAudit             = "config_audit"
-	TrackConfigNotificationLog   = "config_notifications_log"
-	TrackConfigFile              = "config_file"
-	TrackConfigRate              = "config_rate"
-	TrackConfigEmail             = "config_email"
-	TrackConfigPrivacy           = "config_privacy"
-	TrackConfigTheme             = "config_theme"
-	TrackConfigOAuth             = "config_oauth"
-	TrackConfigLDAP              = "config_ldap"
-	TrackConfigCompliance        = "config_compliance"
-	TrackConfigLocalization      = "config_localization"
-	TrackConfigSAML              = "config_saml"
-	TrackConfigPassword          = "config_password"
-	TrackConfigCluster           = "config_cluster"
-	TrackConfigMetrics           = "config_metrics"
-	TrackConfigSupport           = "config_support"
-	TrackConfigNativeApp         = "config_nativeapp"
-	TrackConfigExperimental      = "config_experimental"
-	TrackConfigAnalytics         = "config_analytics"
-	TrackConfigAnnouncement      = "config_announcement"
-	TrackConfigElasticsearch     = "config_elasticsearch"
-	TrackConfigPlugin            = "config_plugin"
-	TrackConfigDataRetention     = "config_data_retention"
-	TrackConfigMessageExport     = "config_message_export"
-	TrackConfigDisplay           = "config_display"
-	TrackConfigGuestAccounts     = "config_guest_accounts"
-	TrackConfigImageProxy        = "config_image_proxy"
-	TrackConfigBleve             = "config_bleve"
-	TrackConfigExport            = "config_export"
-	TrackConfigWrangler          = "config_wrangler"
-	TrackFeatureFlags            = "config_feature_flags"
-	TrackPermissionsGeneral      = "permissions_general"
-	TrackPermissionsSystemScheme = "permissions_system_scheme"
-	TrackPermissionsTeamSchemes  = "permissions_team_schemes"
-	TrackPermissionsSystemRoles  = "permissions_system_roles"
-	TrackElasticsearch           = "elasticsearch"
-	TrackGroups                  = "groups"
-	TrackChannelModeration       = "channel_moderation"
+	TrackConfigService             = "config_service"
+	TrackConfigTeam                = "config_team"
+	TrackConfigClientReq           = "config_client_requirements"
+	TrackConfigSQL                 = "config_sql"
+	TrackConfigLog                 = "config_log"
+	TrackConfigAudit               = "config_audit"
+	TrackConfigNotificationLog     = "config_notifications_log"
+	TrackConfigFile                = "config_file"
+	TrackConfigRate                = "config_rate"
+	TrackConfigEmail               = "config_email"
+	TrackConfigPrivacy             = "config_privacy"
+	TrackConfigTheme               = "config_theme"
+	TrackConfigOAuth               = "config_oauth"
+	TrackConfigLDAP                = "config_ldap"
+	TrackConfigCompliance          = "config_compliance"
+	TrackConfigLocalization        = "config_localization"
+	TrackConfigSAML                = "config_saml"
+	TrackConfigPassword            = "config_password"
+	TrackConfigCluster             = "config_cluster"
+	TrackConfigMetrics             = "config_metrics"
+	TrackConfigSupport             = "config_support"
+	TrackConfigNativeApp           = "config_nativeapp"
+	TrackConfigExperimental        = "config_experimental"
+	TrackConfigAnalytics           = "config_analytics"
+	TrackConfigAnnouncement        = "config_announcement"
+	TrackConfigElasticsearch       = "config_elasticsearch"
+	TrackConfigPlugin              = "config_plugin"
+	TrackConfigDataRetention       = "config_data_retention"
+	TrackConfigMessageExport       = "config_message_export"
+	TrackConfigDisplay             = "config_display"
+	TrackConfigGuestAccounts       = "config_guest_accounts"
+	TrackConfigImageProxy          = "config_image_proxy"
+	TrackConfigBleve               = "config_bleve"
+	TrackConfigExport              = "config_export"
+	TrackConfigWrangler            = "config_wrangler"
+	TrackConfigConnectedWorkspaces = "config_connected_workspaces"
+	TrackFeatureFlags              = "config_feature_flags"
+	TrackPermissionsGeneral        = "permissions_general"
+	TrackPermissionsSystemScheme   = "permissions_system_scheme"
+	TrackPermissionsTeamSchemes    = "permissions_team_schemes"
+	TrackPermissionsSystemRoles    = "permissions_system_roles"
+	TrackElasticsearch             = "elasticsearch"
+	TrackGroups                    = "groups"
+	TrackChannelModeration         = "channel_moderation"
 
 	TrackActivity = "activity"
 	TrackLicense  = "license"
 	TrackServer   = "server"
 	TrackPlugins  = "plugins"
+)
+
+type TrackSKU string
+
+const (
+	TrackProfessionalSKU TrackSKU = "professional"
+	TrackEnterpriseSKU   TrackSKU = "enterprise"
+)
+
+type TrackFeature string
+
+const (
+	TrackGuestFeature          TrackFeature = "guest_accounts"
+	TrackGroupsFeature         TrackFeature = "custom_groups"
+	TrackReadOnlyFeature       TrackFeature = "read_only_channels"
+	TrackSharedChannelsFeature TrackFeature = "shared_channels"
+	TrackScheduledPosts        TrackFeature = "scheduled_posts"
+)
+
+const (
+	TrackPropertyUser       = "user_actual_id"
+	TrackPropertyGroup      = "group_id"
+	TrackPropertyChannel    = "channel_id"
+	TrackPropertyPostAuthor = "post_owner_id"
+	TrackPropertyUserAgent  = "user_agent"
 )
 
 type ServerIface interface {
@@ -116,6 +142,18 @@ type TelemetryService struct {
 type RudderConfig struct {
 	RudderKey    string
 	DataplaneURL string
+}
+
+type EventFeature struct {
+	Name TrackFeature `json:"name"`
+	SKUS []TrackSKU   `json:"skus"`
+}
+
+var featureSKUS = map[TrackFeature][]TrackSKU{
+	TrackGuestFeature:          {TrackProfessionalSKU, TrackEnterpriseSKU},
+	TrackGroupsFeature:         {TrackProfessionalSKU, TrackEnterpriseSKU},
+	TrackReadOnlyFeature:       {TrackProfessionalSKU, TrackEnterpriseSKU},
+	TrackSharedChannelsFeature: {TrackProfessionalSKU, TrackEnterpriseSKU},
 }
 
 func New(srv ServerIface, dbStore store.Store, searchEngine *searchengine.Broker, log *mlog.Logger, verbose bool) (*TelemetryService, error) {
@@ -201,7 +239,7 @@ func (ts *TelemetryService) sendDailyTelemetry(override bool) {
 func (ts *TelemetryService) SendTelemetry(event string, properties map[string]any) {
 	if ts.rudderClient != nil {
 		var context *rudder.Context
-		// if we are part of a cloud installation, add it's ID to the tracked event's context
+		// if we are part of a cloud installation, add its ID to the tracked event's context
 		if installationId := os.Getenv("MM_CLOUD_INSTALLATION_ID"); installationId != "" {
 			context = &rudder.Context{Traits: map[string]any{"installationId": installationId}}
 		}
@@ -213,6 +251,38 @@ func (ts *TelemetryService) SendTelemetry(event string, properties map[string]an
 		})
 		if err != nil {
 			ts.log.Warn("Error sending telemetry", mlog.Err(err))
+		}
+	}
+}
+
+func (ts *TelemetryService) SendTelemetryForFeature(featureName TrackFeature, event string, properties map[string]any) {
+	if ts.rudderClient != nil {
+		skus, ok := featureSKUS[featureName]
+		if !ok {
+			skus = []TrackSKU{}
+			mlog.Warn("Telemetry SKUS are not defined for the feature", mlog.String("feature", featureName))
+		}
+		feature := EventFeature{
+			Name: featureName,
+			SKUS: skus,
+		}
+
+		var context *rudder.Context = &rudder.Context{
+			Extra: map[string]any{"feature": feature},
+		}
+		// if we are part of a cloud installation, add its ID to the tracked event's context
+		if installationId := os.Getenv("MM_CLOUD_INSTALLATION_ID"); installationId != "" {
+			context.Traits = map[string]any{"installationId": installationId}
+		}
+
+		err := ts.rudderClient.Enqueue(rudder.Track{
+			Event:      event,
+			UserId:     ts.TelemetryID,
+			Properties: properties,
+			Context:    context,
+		})
+		if err != nil {
+			ts.log.Warn("Error sending telemetry for feature", mlog.Err(err))
 		}
 	}
 }
@@ -351,7 +421,7 @@ func (ts *TelemetryService) trackActivity() {
 
 	slashCommandsCount, _ = ts.dbStore.Command().AnalyticsCommandCount("")
 
-	if c, err := ts.dbStore.Webhook().AnalyticsIncomingCount(""); err == nil {
+	if c, err := ts.dbStore.Webhook().AnalyticsIncomingCount("", ""); err == nil {
 		incomingWebhooksCount = c
 	}
 
@@ -456,7 +526,6 @@ func (ts *TelemetryService) trackConfig() {
 		"enable_post_search":                                      *cfg.ServiceSettings.EnablePostSearch,
 		"minimum_hashtag_length":                                  *cfg.ServiceSettings.MinimumHashtagLength,
 		"enable_user_statuses":                                    *cfg.ServiceSettings.EnableUserStatuses,
-		"enable_preview_features":                                 *cfg.ServiceSettings.EnablePreviewFeatures,
 		"enable_tutorial":                                         *cfg.ServiceSettings.EnableTutorial,
 		"enable_onboarding_flow":                                  *cfg.ServiceSettings.EnableOnboardingFlow,
 		"experimental_enable_default_channel_leave_join_messages": *cfg.ServiceSettings.ExperimentalEnableDefaultChannelLeaveJoinMessages,
@@ -467,6 +536,7 @@ func (ts *TelemetryService) trackConfig() {
 		"enable_api_team_deletion":                                *cfg.ServiceSettings.EnableAPITeamDeletion,
 		"enable_api_trigger_admin_notification":                   *cfg.ServiceSettings.EnableAPITriggerAdminNotifications,
 		"enable_api_user_deletion":                                *cfg.ServiceSettings.EnableAPIUserDeletion,
+		"enable_api_post_deletion":                                *cfg.ServiceSettings.EnableAPIPostDeletion,
 		"enable_api_channel_deletion":                             *cfg.ServiceSettings.EnableAPIChannelDeletion,
 		"experimental_enable_hardened_mode":                       *cfg.ServiceSettings.ExperimentalEnableHardenedMode,
 		"experimental_strict_csrf_enforcement":                    *cfg.ServiceSettings.ExperimentalStrictCSRFEnforcement,
@@ -494,6 +564,7 @@ func (ts *TelemetryService) trackConfig() {
 		"allow_synced_drafts":                                     *cfg.ServiceSettings.AllowSyncedDrafts,
 		"refresh_post_stats_run_time":                             *cfg.ServiceSettings.RefreshPostStatsRunTime,
 		"maximum_payload_size":                                    *cfg.ServiceSettings.MaximumPayloadSizeBytes,
+		"maximum_url_length":                                      *cfg.ServiceSettings.MaximumURLLength,
 	})
 
 	ts.SendTelemetry(TrackConfigTeam, map[string]any{
@@ -552,18 +623,16 @@ func (ts *TelemetryService) trackConfig() {
 		"enable_webhook_debugging": cfg.LogSettings.EnableWebhookDebugging,
 		"isdefault_file_location":  isDefault(cfg.LogSettings.FileLocation, ""),
 		"advanced_logging_json":    len(cfg.LogSettings.AdvancedLoggingJSON) != 0,
-		"advanced_logging_config":  cfg.LogSettings.AdvancedLoggingConfig != nil && *cfg.LogSettings.AdvancedLoggingConfig != "",
 	})
 
 	ts.SendTelemetry(TrackConfigAudit, map[string]any{
-		"file_enabled":            *cfg.ExperimentalAuditSettings.FileEnabled,
-		"file_max_size_mb":        *cfg.ExperimentalAuditSettings.FileMaxSizeMB,
-		"file_max_age_days":       *cfg.ExperimentalAuditSettings.FileMaxAgeDays,
-		"file_max_backups":        *cfg.ExperimentalAuditSettings.FileMaxBackups,
-		"file_compress":           *cfg.ExperimentalAuditSettings.FileCompress,
-		"file_max_queue_size":     *cfg.ExperimentalAuditSettings.FileMaxQueueSize,
-		"advanced_logging_json":   len(cfg.ExperimentalAuditSettings.AdvancedLoggingJSON) != 0,
-		"advanced_logging_config": cfg.ExperimentalAuditSettings.AdvancedLoggingConfig != nil && *cfg.ExperimentalAuditSettings.AdvancedLoggingConfig != "",
+		"file_enabled":          *cfg.ExperimentalAuditSettings.FileEnabled,
+		"file_max_size_mb":      *cfg.ExperimentalAuditSettings.FileMaxSizeMB,
+		"file_max_age_days":     *cfg.ExperimentalAuditSettings.FileMaxAgeDays,
+		"file_max_backups":      *cfg.ExperimentalAuditSettings.FileMaxBackups,
+		"file_compress":         *cfg.ExperimentalAuditSettings.FileCompress,
+		"file_max_queue_size":   *cfg.ExperimentalAuditSettings.FileMaxQueueSize,
+		"advanced_logging_json": len(cfg.ExperimentalAuditSettings.AdvancedLoggingJSON) != 0,
 	})
 
 	ts.SendTelemetry(TrackConfigNotificationLog, map[string]any{
@@ -575,7 +644,6 @@ func (ts *TelemetryService) trackConfig() {
 		"file_json":               *cfg.NotificationLogSettings.FileJson,
 		"isdefault_file_location": isDefault(*cfg.NotificationLogSettings.FileLocation, ""),
 		"advanced_logging_json":   len(cfg.NotificationLogSettings.AdvancedLoggingJSON) != 0,
-		"advanced_logging_config": cfg.NotificationLogSettings.AdvancedLoggingConfig != nil && *cfg.NotificationLogSettings.AdvancedLoggingConfig != "",
 	})
 
 	ts.SendTelemetry(TrackConfigPassword, map[string]any{
@@ -776,11 +844,10 @@ func (ts *TelemetryService) trackConfig() {
 		"isdefault_client_side_cert_check":    isDefault(*cfg.ExperimentalSettings.ClientSideCertCheck, model.ClientSideCertCheckPrimaryAuth),
 		"link_metadata_timeout_milliseconds":  *cfg.ExperimentalSettings.LinkMetadataTimeoutMilliseconds,
 		"restrict_system_admin":               *cfg.ExperimentalSettings.RestrictSystemAdmin,
-		"enable_shared_channels":              *cfg.ExperimentalSettings.EnableSharedChannels,
-		"enable_remote_cluster_service":       *cfg.ExperimentalSettings.EnableRemoteClusterService && cfg.FeatureFlags.EnableRemoteClusterService,
 		"enable_app_bar":                      !*cfg.ExperimentalSettings.DisableAppBar,
 		"disable_refetching_on_browser_focus": *cfg.ExperimentalSettings.DisableRefetchingOnBrowserFocus,
 		"delay_channel_autocomplete":          *cfg.ExperimentalSettings.DelayChannelAutocomplete,
+		"youtube_referrer_policy":             *cfg.ExperimentalSettings.YoutubeReferrerPolicy,
 	})
 
 	ts.SendTelemetry(TrackConfigAnalytics, map[string]any{
@@ -893,6 +960,13 @@ func (ts *TelemetryService) trackConfig() {
 		"move_thread_from_group_message_channel_enable":  cfg.WranglerSettings.MoveThreadFromGroupMessageChannelEnable,
 	})
 
+	ts.SendTelemetry(TrackConfigConnectedWorkspaces, map[string]any{
+		"enable_shared_channels":              *cfg.ConnectedWorkspacesSettings.EnableSharedChannels,
+		"enable_remote_cluster_service":       *cfg.ConnectedWorkspacesSettings.EnableRemoteClusterService && cfg.FeatureFlags.EnableRemoteClusterService,
+		"disable_shared_channels_status_sync": *cfg.ConnectedWorkspacesSettings.DisableSharedChannelsStatusSync,
+		"max_posts_per_sync":                  *cfg.ConnectedWorkspacesSettings.MaxPostsPerSync,
+	})
+
 	// Convert feature flags to map[string]any for sending
 	flags := cfg.FeatureFlags.ToMap()
 	interfaceFlags := make(map[string]any)
@@ -991,7 +1065,7 @@ func (ts *TelemetryService) trackPlugins() {
 		"plugins_with_broken_manifests": brokenManifestCount,
 	})
 
-	pluginsEnvironment.RunMultiPluginHook(func(hooks plugin.Hooks) bool {
+	pluginsEnvironment.RunMultiPluginHook(func(hooks plugin.Hooks, _ *model.Manifest) bool {
 		hooks.OnSendDailyTelemetry()
 		return true
 	}, plugin.OnSendDailyTelemetryID)
@@ -1438,15 +1512,12 @@ func (ts *TelemetryService) trackPluginConfig(cfg *model.Config, marketplaceURL 
 		"skype4business",
 		"zoom",
 		"focalboard",
+		"com.mattermost.msteams-sync",
 	}
 
 	marketplacePlugins, err := ts.GetAllMarketplacePlugins(marketplaceURL)
 	if err != nil {
 		mlog.Info("Failed to fetch marketplace plugins for telemetry. Using predefined list.", mlog.Err(err))
-
-		for _, id := range knownPluginIDs {
-			pluginConfigData["enable_"+id] = pluginActivated(cfg.PluginSettings.PluginStates, id)
-		}
 	} else {
 		for _, p := range marketplacePlugins {
 			id := p.Manifest.Id
@@ -1455,26 +1526,31 @@ func (ts *TelemetryService) trackPluginConfig(cfg *model.Config, marketplaceURL 
 		}
 	}
 
+	for _, id := range knownPluginIDs {
+		pluginIdStr := fmt.Sprintf("enable_%s", id)
+		_, exists := pluginConfigData[pluginIdStr]
+		if !exists {
+			pluginConfigData[pluginIdStr] = pluginActivated(cfg.PluginSettings.PluginStates, id)
+		}
+	}
 	pluginsEnvironment := ts.srv.GetPluginsEnvironment()
 	if pluginsEnvironment != nil {
 		if plugins, appErr := pluginsEnvironment.Available(); appErr != nil {
 			ts.log.Warn("Unable to add plugin versions to telemetry", mlog.Err(appErr))
 		} else {
-			// If marketplace request failed, use predefined list
-			if marketplacePlugins == nil {
-				for _, id := range knownPluginIDs {
-					pluginConfigData["version_"+id] = pluginVersion(plugins, id)
-				}
-			} else {
-				for _, p := range marketplacePlugins {
-					id := p.Manifest.Id
-
-					pluginConfigData["version_"+id] = pluginVersion(plugins, id)
+			for _, p := range marketplacePlugins {
+				id := p.Manifest.Id
+				pluginConfigData["version_"+id] = pluginVersion(plugins, id)
+			}
+			for _, id := range knownPluginIDs {
+				pluginVersionStr := fmt.Sprintf("version_%s", id)
+				_, exists := pluginConfigData[pluginVersionStr]
+				if !exists {
+					pluginConfigData[pluginVersionStr] = pluginVersion(plugins, id)
 				}
 			}
 		}
 	}
-
 	ts.SendTelemetry(TrackConfigPlugin, pluginConfigData)
 }
 

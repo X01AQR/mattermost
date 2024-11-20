@@ -44,6 +44,7 @@ const (
 	MetricsSubsystemNotifications      = "notifications"
 	MetricsSubsystemClientsMobileApp   = "mobileapp"
 	MetricsSubsystemClientsWeb         = "webapp"
+	MetricsSubsystemClientsDesktopApp  = "desktopapp"
 	MetricsCloudInstallationLabel      = "installationId"
 	MetricsCloudDatabaseClusterLabel   = "databaseClusterName"
 	MetricsCloudInstallationGroupLabel = "installationGroupId"
@@ -76,21 +77,8 @@ type MetricsInterfaceImpl struct {
 
 	ClusterHealthGauge prometheus.GaugeFunc
 
-	ClusterEventTypeCounters                     *prometheus.CounterVec
-	ClusterEventTypePublish                      prometheus.Counter
-	ClusterEventTypeStatus                       prometheus.Counter
-	ClusterEventTypeInvAll                       prometheus.Counter
-	ClusterEventTypeInvReactions                 prometheus.Counter
-	ClusterEventTypeInvWebhook                   prometheus.Counter
-	ClusterEventTypeInvChannelPosts              prometheus.Counter
-	ClusterEventTypeInvChannelMembersNotifyProps prometheus.Counter
-	ClusterEventTypeInvChannelMembers            prometheus.Counter
-	ClusterEventTypeInvChannelByName             prometheus.Counter
-	ClusterEventTypeInvChannel                   prometheus.Counter
-	ClusterEventTypeInvUser                      prometheus.Counter
-	ClusterEventTypeInvSessions                  prometheus.Counter
-	ClusterEventTypeInvRoles                     prometheus.Counter
-	ClusterEventTypeOther                        prometheus.Counter
+	ClusterEventTypeCounters *prometheus.CounterVec
+	ClusterEventMap          map[model.ClusterEvent]prometheus.Counter
 
 	LoginCounter     prometheus.Counter
 	LoginFailCounter prometheus.Counter
@@ -169,6 +157,7 @@ type MetricsInterfaceImpl struct {
 	SearchFileSearchesDuration prometheus.Histogram
 	StoreTimesHistograms       *prometheus.HistogramVec
 	APITimesHistograms         *prometheus.HistogramVec
+	RedisTimesHistograms       *prometheus.HistogramVec
 	SearchPostIndexCounter     prometheus.Counter
 	SearchFileIndexCounter     prometheus.Counter
 	SearchUserIndexCounter     prometheus.Counter
@@ -227,6 +216,10 @@ type MetricsInterfaceImpl struct {
 	MobileClientLoadDuration          *prometheus.HistogramVec
 	MobileClientChannelSwitchDuration *prometheus.HistogramVec
 	MobileClientTeamSwitchDuration    *prometheus.HistogramVec
+	MobileClientSessionMetadataGauge  *prometheus.GaugeVec
+
+	DesktopClientCPUUsage    *prometheus.HistogramVec
+	DesktopClientMemoryUsage *prometheus.HistogramVec
 }
 
 func init() {
@@ -467,17 +460,48 @@ func New(ps *platform.PlatformService, driver, dataSource string) *MetricsInterf
 		[]string{"name"},
 	)
 	m.Registry.MustRegister(m.ClusterEventTypeCounters)
-	m.ClusterEventTypePublish = m.ClusterEventTypeCounters.With(prometheus.Labels{"name": string(model.ClusterEventPublish)})
-	m.ClusterEventTypeStatus = m.ClusterEventTypeCounters.With(prometheus.Labels{"name": string(model.ClusterEventUpdateStatus)})
-	m.ClusterEventTypeInvAll = m.ClusterEventTypeCounters.With(prometheus.Labels{"name": string(model.ClusterEventInvalidateAllCaches)})
-	m.ClusterEventTypeInvReactions = m.ClusterEventTypeCounters.With(prometheus.Labels{"name": string(model.ClusterEventInvalidateCacheForReactions)})
-	m.ClusterEventTypeInvChannelMembersNotifyProps = m.ClusterEventTypeCounters.With(prometheus.Labels{"name": string(model.ClusterEventInvalidateCacheForChannelMembersNotifyProps)})
-	m.ClusterEventTypeInvChannelByName = m.ClusterEventTypeCounters.With(prometheus.Labels{"name": string(model.ClusterEventInvalidateCacheForChannelByName)})
-	m.ClusterEventTypeInvChannel = m.ClusterEventTypeCounters.With(prometheus.Labels{"name": string(model.ClusterEventInvalidateCacheForChannel)})
-	m.ClusterEventTypeInvUser = m.ClusterEventTypeCounters.With(prometheus.Labels{"name": string(model.ClusterEventInvalidateCacheForUser)})
-	m.ClusterEventTypeInvSessions = m.ClusterEventTypeCounters.With(prometheus.Labels{"name": string(model.ClusterEventClearSessionCacheForUser)})
-	m.ClusterEventTypeInvRoles = m.ClusterEventTypeCounters.With(prometheus.Labels{"name": string(model.ClusterEventInvalidateCacheForRoles)})
-	m.ClusterEventTypeOther = m.ClusterEventTypeCounters.With(prometheus.Labels{"name": "other"})
+	m.ClusterEventMap = make(map[model.ClusterEvent]prometheus.Counter)
+	for _, event := range []model.ClusterEvent{
+		// Note: Keep this list in sync with the events in model/cluster_message.go.
+		model.ClusterEventPublish,
+		model.ClusterEventUpdateStatus,
+		model.ClusterEventInvalidateAllCaches,
+		model.ClusterEventInvalidateCacheForReactions,
+		model.ClusterEventInvalidateCacheForChannelMembersNotifyProps,
+		model.ClusterEventInvalidateCacheForChannelByName,
+		model.ClusterEventInvalidateCacheForChannel,
+		model.ClusterEventInvalidateCacheForChannelGuestCount,
+		model.ClusterEventInvalidateCacheForUser,
+		model.ClusterEventInvalidateWebConnCacheForUser,
+		model.ClusterEventClearSessionCacheForUser,
+		model.ClusterEventInvalidateCacheForRoles,
+		model.ClusterEventInvalidateCacheForRolePermissions,
+		model.ClusterEventInvalidateCacheForProfileByIds,
+		model.ClusterEventInvalidateCacheForAllProfiles,
+		model.ClusterEventInvalidateCacheForProfileInChannel,
+		model.ClusterEventInvalidateCacheForSchemes,
+		model.ClusterEventInvalidateCacheForFileInfos,
+		model.ClusterEventInvalidateCacheForWebhooks,
+		model.ClusterEventInvalidateCacheForEmojisById,
+		model.ClusterEventInvalidateCacheForEmojisIdByName,
+		model.ClusterEventInvalidateCacheForChannelFileCount,
+		model.ClusterEventInvalidateCacheForChannelPinnedpostsCounts,
+		model.ClusterEventInvalidateCacheForChannelMemberCounts,
+		model.ClusterEventInvalidateCacheForChannelsMemberCount,
+		model.ClusterEventInvalidateCacheForLastPosts,
+		model.ClusterEventInvalidateCacheForLastPostTime,
+		model.ClusterEventInvalidateCacheForPostsUsage,
+		model.ClusterEventInvalidateCacheForTeams,
+		model.ClusterEventClearSessionCacheForAllUsers,
+		model.ClusterEventInstallPlugin,
+		model.ClusterEventRemovePlugin,
+		model.ClusterEventPluginEvent,
+		model.ClusterEventInvalidateCacheForTermsOfService,
+		model.ClusterEventBusyStateChanged,
+	} {
+		m.ClusterEventMap[event] = m.ClusterEventTypeCounters.With(prometheus.Labels{"name": string(event)})
+	}
+	m.ClusterEventMap[model.ClusterEvent("other")] = m.ClusterEventTypeCounters.With(prometheus.Labels{"name": "other"})
 
 	// Login Subsystem
 
@@ -745,6 +769,18 @@ func New(ps *platform.PlatformService, driver, dataSource string) *MetricsInterf
 		[]string{"handler", "method", "status_code", "origin_client", "page_load_context"},
 	)
 	m.Registry.MustRegister(m.APITimesHistograms)
+
+	m.RedisTimesHistograms = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace:   MetricsNamespace,
+			Subsystem:   MetricsSubsystemDB,
+			Name:        "cache_time",
+			Help:        "Time to execute the cache handler",
+			ConstLabels: additionalLabels,
+		},
+		[]string{"cache_name", "operation"},
+	)
+	m.Registry.MustRegister(m.RedisTimesHistograms)
 
 	m.SearchPostIndexCounter = prometheus.NewCounter(prometheus.CounterOpts{
 		Namespace:   MetricsNamespace,
@@ -1175,7 +1211,7 @@ func New(ps *platform.PlatformService, driver, dataSource string) *MetricsInterf
 			// Extend the range of buckets for this while we get a better idea of the expected range of this metric is
 			Buckets: []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 15, 20},
 		},
-		[]string{"platform", "agent"},
+		[]string{"platform", "agent", "region"},
 	)
 	m.Registry.MustRegister(m.ClientLargestContentfulPaint)
 
@@ -1186,7 +1222,7 @@ func New(ps *platform.PlatformService, driver, dataSource string) *MetricsInterf
 			Name:      "interaction_to_next_paint",
 			Help:      "Measure of how long it takes for a user to see the effects of clicking with a mouse, tapping with a touchscreen, or pressing a key on the keyboard (seconds)",
 		},
-		[]string{"platform", "agent"},
+		[]string{"platform", "agent", "interaction"},
 	)
 	m.Registry.MustRegister(m.ClientInteractionToNextPaint)
 
@@ -1231,7 +1267,7 @@ func New(ps *platform.PlatformService, driver, dataSource string) *MetricsInterf
 			Name:      "channel_switch",
 			Help:      "Duration of the time taken from when a user clicks on a channel in the LHS to when posts in that channel become visible (seconds)",
 		},
-		[]string{"platform", "agent"},
+		[]string{"platform", "agent", "fresh"},
 	)
 	m.Registry.MustRegister(m.ClientChannelSwitchDuration)
 
@@ -1242,7 +1278,7 @@ func New(ps *platform.PlatformService, driver, dataSource string) *MetricsInterf
 			Name:      "team_switch",
 			Help:      "Duration of the time taken from when a user clicks on a team in the LHS to when posts in that team become visible (seconds)",
 		},
-		[]string{"platform", "agent"},
+		[]string{"platform", "agent", "fresh"},
 	)
 	m.Registry.MustRegister(m.ClientTeamSwitchDuration)
 
@@ -1303,6 +1339,41 @@ func New(ps *platform.PlatformService, driver, dataSource string) *MetricsInterf
 		[]string{"platform"},
 	)
 	m.Registry.MustRegister(m.MobileClientTeamSwitchDuration)
+
+	m.MobileClientSessionMetadataGauge = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: MetricsNamespace,
+			Subsystem: MetricsSubsystemClientsMobileApp,
+			Name:      "mobile_session_metadata",
+			Help:      "The number of mobile sessions in each version, platform and whether they have the notifications disabled",
+		},
+		[]string{"version", "platform", "notifications_disabled"},
+	)
+	m.Registry.MustRegister(m.MobileClientSessionMetadataGauge)
+
+	m.DesktopClientCPUUsage = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: MetricsNamespace,
+			Subsystem: MetricsSubsystemClientsDesktopApp,
+			Name:      "cpu_usage",
+			Help:      "Average CPU usage of a specific process over an interval",
+			Buckets:   []float64{0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 80, 100},
+		},
+		[]string{"platform", "version", "processName"},
+	)
+	m.Registry.MustRegister(m.DesktopClientCPUUsage)
+
+	m.DesktopClientMemoryUsage = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: MetricsNamespace,
+			Subsystem: MetricsSubsystemClientsDesktopApp,
+			Name:      "memory_usage",
+			Help:      "Memory usage in MB of a specific process",
+			Buckets:   []float64{0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 3000, 5000},
+		},
+		[]string{"platform", "version", "processName"},
+	)
+	m.Registry.MustRegister(m.DesktopClientMemoryUsage)
 
 	return m
 }
@@ -1481,31 +1552,19 @@ func (mi *MetricsInterfaceImpl) ObserveAPIEndpointDuration(handler, method, stat
 	mi.APITimesHistograms.With(prometheus.Labels{"handler": handler, "method": method, "status_code": statusCode, "origin_client": originClient, "page_load_context": pageLoadContext}).Observe(elapsed)
 }
 
+func (mi *MetricsInterfaceImpl) ObserveRedisEndpointDuration(cacheName, operation string, elapsed float64) {
+	mi.RedisTimesHistograms.With(prometheus.Labels{
+		"cache_name": cacheName,
+		"operation":  operation,
+	}).Observe(elapsed)
+}
+
 func (mi *MetricsInterfaceImpl) IncrementClusterEventType(eventType model.ClusterEvent) {
-	switch eventType {
-	case model.ClusterEventPublish:
-		mi.ClusterEventTypePublish.Inc()
-	case model.ClusterEventUpdateStatus:
-		mi.ClusterEventTypeStatus.Inc()
-	case model.ClusterEventInvalidateAllCaches:
-		mi.ClusterEventTypeInvAll.Inc()
-	case model.ClusterEventInvalidateCacheForReactions:
-		mi.ClusterEventTypeInvReactions.Inc()
-	case model.ClusterEventInvalidateCacheForChannelMembersNotifyProps:
-		mi.ClusterEventTypeInvChannelMembersNotifyProps.Inc()
-	case model.ClusterEventInvalidateCacheForChannelByName:
-		mi.ClusterEventTypeInvChannelByName.Inc()
-	case model.ClusterEventInvalidateCacheForChannel:
-		mi.ClusterEventTypeInvChannel.Inc()
-	case model.ClusterEventInvalidateCacheForUser:
-		mi.ClusterEventTypeInvUser.Inc()
-	case model.ClusterEventClearSessionCacheForUser:
-		mi.ClusterEventTypeInvSessions.Inc()
-	case model.ClusterEventInvalidateCacheForRoles:
-		mi.ClusterEventTypeInvRoles.Inc()
-	default:
-		mi.ClusterEventTypeOther.Inc()
+	if event, ok := mi.ClusterEventMap[eventType]; ok {
+		event.Inc()
+		return
 	}
+	mi.ClusterEventMap[model.ClusterEvent("other")].Inc()
 }
 
 func (mi *MetricsInterfaceImpl) IncrementLogin() {
@@ -1783,12 +1842,12 @@ func (mi *MetricsInterfaceImpl) ObserveClientFirstContentfulPaint(platform, agen
 	mi.ClientFirstContentfulPaint.With(prometheus.Labels{"platform": platform, "agent": agent}).Observe(elapsed)
 }
 
-func (mi *MetricsInterfaceImpl) ObserveClientLargestContentfulPaint(platform, agent string, elapsed float64) {
-	mi.ClientLargestContentfulPaint.With(prometheus.Labels{"platform": platform, "agent": agent}).Observe(elapsed)
+func (mi *MetricsInterfaceImpl) ObserveClientLargestContentfulPaint(platform, agent, region string, elapsed float64) {
+	mi.ClientLargestContentfulPaint.With(prometheus.Labels{"platform": platform, "agent": agent, "region": region}).Observe(elapsed)
 }
 
-func (mi *MetricsInterfaceImpl) ObserveClientInteractionToNextPaint(platform, agent string, elapsed float64) {
-	mi.ClientInteractionToNextPaint.With(prometheus.Labels{"platform": platform, "agent": agent}).Observe(elapsed)
+func (mi *MetricsInterfaceImpl) ObserveClientInteractionToNextPaint(platform, agent, interaction string, elapsed float64) {
+	mi.ClientInteractionToNextPaint.With(prometheus.Labels{"platform": platform, "agent": agent, "interaction": interaction}).Observe(elapsed)
 }
 
 func (mi *MetricsInterfaceImpl) ObserveClientCumulativeLayoutShift(platform, agent string, elapsed float64) {
@@ -1803,12 +1862,12 @@ func (mi *MetricsInterfaceImpl) ObserveClientPageLoadDuration(platform, agent st
 	mi.ClientPageLoadDuration.With(prometheus.Labels{"platform": platform, "agent": agent}).Observe(elapsed)
 }
 
-func (mi *MetricsInterfaceImpl) ObserveClientChannelSwitchDuration(platform, agent string, elapsed float64) {
-	mi.ClientChannelSwitchDuration.With(prometheus.Labels{"platform": platform, "agent": agent}).Observe(elapsed)
+func (mi *MetricsInterfaceImpl) ObserveClientChannelSwitchDuration(platform, agent, fresh string, elapsed float64) {
+	mi.ClientChannelSwitchDuration.With(prometheus.Labels{"platform": platform, "agent": agent, "fresh": fresh}).Observe(elapsed)
 }
 
-func (mi *MetricsInterfaceImpl) ObserveClientTeamSwitchDuration(platform, agent string, elapsed float64) {
-	mi.ClientTeamSwitchDuration.With(prometheus.Labels{"platform": platform, "agent": agent}).Observe(elapsed)
+func (mi *MetricsInterfaceImpl) ObserveClientTeamSwitchDuration(platform, agent, fresh string, elapsed float64) {
+	mi.ClientTeamSwitchDuration.With(prometheus.Labels{"platform": platform, "agent": agent, "fresh": fresh}).Observe(elapsed)
 }
 
 func (mi *MetricsInterfaceImpl) ObserveClientRHSLoadDuration(platform, agent string, elapsed float64) {
@@ -1817,6 +1876,14 @@ func (mi *MetricsInterfaceImpl) ObserveClientRHSLoadDuration(platform, agent str
 
 func (mi *MetricsInterfaceImpl) ObserveGlobalThreadsLoadDuration(platform, agent string, elapsed float64) {
 	mi.ClientGlobalThreadsLoadDuration.With(prometheus.Labels{"platform": platform, "agent": agent}).Observe(elapsed)
+}
+
+func (mi *MetricsInterfaceImpl) ObserveDesktopCpuUsage(platform, version, process string, usage float64) {
+	mi.DesktopClientCPUUsage.With(prometheus.Labels{"platform": platform, "version": version, "processName": process}).Observe(usage)
+}
+
+func (mi *MetricsInterfaceImpl) ObserveDesktopMemoryUsage(platform, version, process string, usage float64) {
+	mi.DesktopClientMemoryUsage.With(prometheus.Labels{"platform": platform, "version": version, "processName": process}).Observe(usage)
 }
 
 func (mi *MetricsInterfaceImpl) ObserveMobileClientLoadDuration(platform string, elapsed float64) {
@@ -1829,6 +1896,14 @@ func (mi *MetricsInterfaceImpl) ObserveMobileClientChannelSwitchDuration(platfor
 
 func (mi *MetricsInterfaceImpl) ObserveMobileClientTeamSwitchDuration(platform string, elapsed float64) {
 	mi.MobileClientTeamSwitchDuration.With(prometheus.Labels{"platform": platform}).Observe(elapsed)
+}
+
+func (mi *MetricsInterfaceImpl) ObserveMobileClientSessionMetadata(version string, platform string, value float64, notificationDisabled string) {
+	mi.MobileClientSessionMetadataGauge.With(prometheus.Labels{"version": version, "platform": platform, "notifications_disabled": notificationDisabled}).Set(value)
+}
+
+func (mi *MetricsInterfaceImpl) ClearMobileClientSessionMetadata() {
+	mi.MobileClientSessionMetadataGauge.Reset()
 }
 
 func extractDBCluster(driver, connectionString string) (string, error) {

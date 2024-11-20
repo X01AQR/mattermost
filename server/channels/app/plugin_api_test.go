@@ -107,7 +107,8 @@ func setupMultiPluginAPITest(t *testing.T, pluginCodes []string, pluginManifests
 			utils.CompileGoTest(t, pluginCodes[i], backend)
 		}
 
-		os.WriteFile(filepath.Join(pluginDir, pluginID, "plugin.json"), []byte(pluginManifests[i]), 0600)
+		err := os.WriteFile(filepath.Join(pluginDir, pluginID, "plugin.json"), []byte(pluginManifests[i]), 0600)
+		require.NoError(t, err)
 		manifest, activated, reterr := env.Activate(pluginID)
 		require.NoError(t, reterr)
 		require.NotNil(t, manifest)
@@ -220,7 +221,10 @@ func TestPluginAPIGetUserPreferences(t *testing.T) {
 		Username: "user1" + model.NewId(),
 	})
 	require.Nil(t, err)
-	defer th.App.PermanentDeleteUser(th.Context, user1)
+	defer func() {
+		appErr := th.App.PermanentDeleteUser(th.Context, user1)
+		require.Nil(t, appErr)
+	}()
 
 	preferences, err := api.GetPreferencesForUser(user1.Id)
 	require.Nil(t, err)
@@ -250,7 +254,10 @@ func TestPluginAPIDeleteUserPreferences(t *testing.T) {
 		Username: "user1" + model.NewId(),
 	})
 	require.Nil(t, err)
-	defer th.App.PermanentDeleteUser(th.Context, user1)
+	defer func() {
+		appErr := th.App.PermanentDeleteUser(th.Context, user1)
+		require.Nil(t, appErr)
+	}()
 
 	preferences, err := api.GetPreferencesForUser(user1.Id)
 	require.Nil(t, err)
@@ -268,7 +275,10 @@ func TestPluginAPIDeleteUserPreferences(t *testing.T) {
 		Username: "user2" + model.NewId(),
 	})
 	require.Nil(t, err)
-	defer th.App.PermanentDeleteUser(th.Context, user2)
+	defer func() {
+		appErr := th.App.PermanentDeleteUser(th.Context, user2)
+		require.Nil(t, appErr)
+	}()
 
 	preference := model.Preference{
 		Name:     user2.Id,
@@ -305,7 +315,10 @@ func TestPluginAPIUpdateUserPreferences(t *testing.T) {
 		Username: "user1" + model.NewId(),
 	})
 	require.Nil(t, err)
-	defer th.App.PermanentDeleteUser(th.Context, user1)
+	defer func() {
+		appErr := th.App.PermanentDeleteUser(th.Context, user1)
+		require.Nil(t, appErr)
+	}()
 
 	preferences, err := api.GetPreferencesForUser(user1.Id)
 	require.Nil(t, err)
@@ -353,7 +366,10 @@ func TestPluginAPIGetUsers(t *testing.T) {
 		Username: "user1" + model.NewId(),
 	})
 	require.Nil(t, err)
-	defer th.App.PermanentDeleteUser(th.Context, user1)
+	defer func() {
+		appErr := th.App.PermanentDeleteUser(th.Context, user1)
+		require.Nil(t, appErr)
+	}()
 
 	user2, err := th.App.CreateUser(th.Context, &model.User{
 		Email:    strings.ToLower(model.NewId()) + "success+test@example.com",
@@ -361,7 +377,10 @@ func TestPluginAPIGetUsers(t *testing.T) {
 		Username: "user2" + model.NewId(),
 	})
 	require.Nil(t, err)
-	defer th.App.PermanentDeleteUser(th.Context, user2)
+	defer func() {
+		appErr := th.App.PermanentDeleteUser(th.Context, user2)
+		require.Nil(t, appErr)
+	}()
 
 	user3, err := th.App.CreateUser(th.Context, &model.User{
 		Email:    strings.ToLower(model.NewId()) + "success+test@example.com",
@@ -369,7 +388,10 @@ func TestPluginAPIGetUsers(t *testing.T) {
 		Username: "user3" + model.NewId(),
 	})
 	require.Nil(t, err)
-	defer th.App.PermanentDeleteUser(th.Context, user3)
+	defer func() {
+		appErr := th.App.PermanentDeleteUser(th.Context, user3)
+		require.Nil(t, appErr)
+	}()
 
 	user4, err := th.App.CreateUser(th.Context, &model.User{
 		Email:    strings.ToLower(model.NewId()) + "success+test@example.com",
@@ -377,7 +399,10 @@ func TestPluginAPIGetUsers(t *testing.T) {
 		Username: "user4" + model.NewId(),
 	})
 	require.Nil(t, err)
-	defer th.App.PermanentDeleteUser(th.Context, user4)
+	defer func() {
+		appErr := th.App.PermanentDeleteUser(th.Context, user4)
+		require.Nil(t, appErr)
+	}()
 
 	testCases := []struct {
 		Description   string
@@ -440,7 +465,10 @@ func TestPluginAPIGetUsersByIds(t *testing.T) {
 		Username: "user1" + model.NewId(),
 	})
 	require.Nil(t, err)
-	defer th.App.PermanentDeleteUser(th.Context, user1)
+	defer func() {
+		appErr := th.App.PermanentDeleteUser(th.Context, user1)
+		require.Nil(t, appErr)
+	}()
 
 	user2, err := th.App.CreateUser(th.Context, &model.User{
 		Email:    strings.ToLower(model.NewId()) + "success+test@example.com",
@@ -448,7 +476,10 @@ func TestPluginAPIGetUsersByIds(t *testing.T) {
 		Username: "user2" + model.NewId(),
 	})
 	require.Nil(t, err)
-	defer th.App.PermanentDeleteUser(th.Context, user2)
+	defer func() {
+		appErr := th.App.PermanentDeleteUser(th.Context, user2)
+		require.Nil(t, appErr)
+	}()
 
 	user3, err := th.App.CreateUser(th.Context, &model.User{
 		Email:    strings.ToLower(model.NewId()) + "success+test@example.com",
@@ -456,7 +487,10 @@ func TestPluginAPIGetUsersByIds(t *testing.T) {
 		Username: "user3" + model.NewId(),
 	})
 	require.Nil(t, err)
-	defer th.App.PermanentDeleteUser(th.Context, user3)
+	defer func() {
+		appErr := th.App.PermanentDeleteUser(th.Context, user3)
+		require.Nil(t, appErr)
+	}()
 
 	testCases := []struct {
 		Description  string
@@ -498,7 +532,10 @@ func TestPluginAPIGetUsersInTeam(t *testing.T) {
 		Username: "user1" + model.NewId(),
 	})
 	require.Nil(t, err)
-	defer th.App.PermanentDeleteUser(th.Context, user1)
+	defer func() {
+		appErr := th.App.PermanentDeleteUser(th.Context, user1)
+		require.Nil(t, appErr)
+	}()
 
 	user2, err := th.App.CreateUser(th.Context, &model.User{
 		Email:    strings.ToLower(model.NewId()) + "success+test@example.com",
@@ -506,7 +543,10 @@ func TestPluginAPIGetUsersInTeam(t *testing.T) {
 		Username: "user2" + model.NewId(),
 	})
 	require.Nil(t, err)
-	defer th.App.PermanentDeleteUser(th.Context, user2)
+	defer func() {
+		appErr := th.App.PermanentDeleteUser(th.Context, user2)
+		require.Nil(t, appErr)
+	}()
 
 	user3, err := th.App.CreateUser(th.Context, &model.User{
 		Email:    strings.ToLower(model.NewId()) + "success+test@example.com",
@@ -514,7 +554,10 @@ func TestPluginAPIGetUsersInTeam(t *testing.T) {
 		Username: "user3" + model.NewId(),
 	})
 	require.Nil(t, err)
-	defer th.App.PermanentDeleteUser(th.Context, user3)
+	defer func() {
+		appErr := th.App.PermanentDeleteUser(th.Context, user3)
+		require.Nil(t, appErr)
+	}()
 
 	user4, err := th.App.CreateUser(th.Context, &model.User{
 		Email:    strings.ToLower(model.NewId()) + "success+test@example.com",
@@ -522,7 +565,10 @@ func TestPluginAPIGetUsersInTeam(t *testing.T) {
 		Username: "user4" + model.NewId(),
 	})
 	require.Nil(t, err)
-	defer th.App.PermanentDeleteUser(th.Context, user4)
+	defer func() {
+		appErr := th.App.PermanentDeleteUser(th.Context, user4)
+		require.Nil(t, appErr)
+	}()
 
 	// Add all users to team 1
 	_, appErr := th.App.JoinUserToTeam(th.Context, team1, user1, "")
@@ -611,7 +657,10 @@ func TestPluginAPIUserCustomStatus(t *testing.T) {
 		Password: "password",
 	})
 	require.Nil(t, err)
-	defer th.App.PermanentDeleteUser(th.Context, user1)
+	defer func() {
+		appErr := th.App.PermanentDeleteUser(th.Context, user1)
+		require.Nil(t, appErr)
+	}()
 
 	custom := &model.CustomStatus{
 		Emoji: "tada",
@@ -665,8 +714,10 @@ func TestPluginAPIGetFile(t *testing.T) {
 	info, err := th.App.DoUploadFile(th.Context, uploadTime, th.BasicTeam.Id, th.BasicChannel.Id, th.BasicUser.Id, filename, fileData, true)
 	require.Nil(t, err)
 	defer func() {
-		th.App.Srv().Store().FileInfo().PermanentDelete(th.Context, info.Id)
-		th.App.RemoveFile(info.Path)
+		err := th.App.Srv().Store().FileInfo().PermanentDelete(th.Context, info.Id)
+		require.NoError(t, err)
+		appErr := th.App.RemoveFile(info.Path)
+		require.Nil(t, appErr)
 	}()
 
 	data, err1 := api.GetFile(info.Id)
@@ -695,8 +746,10 @@ func TestPluginAPIGetFileInfos(t *testing.T) {
 	)
 	require.Nil(t, err)
 	defer func() {
-		th.App.Srv().Store().FileInfo().PermanentDelete(th.Context, fileInfo1.Id)
-		th.App.RemoveFile(fileInfo1.Path)
+		err := th.App.Srv().Store().FileInfo().PermanentDelete(th.Context, fileInfo1.Id)
+		require.NoError(t, err)
+		appErr := th.App.RemoveFile(fileInfo1.Path)
+		require.Nil(t, appErr)
 	}()
 
 	fileInfo2, err := th.App.DoUploadFile(th.Context,
@@ -710,8 +763,10 @@ func TestPluginAPIGetFileInfos(t *testing.T) {
 	)
 	require.Nil(t, err)
 	defer func() {
-		th.App.Srv().Store().FileInfo().PermanentDelete(th.Context, fileInfo2.Id)
-		th.App.RemoveFile(fileInfo2.Path)
+		err := th.App.Srv().Store().FileInfo().PermanentDelete(th.Context, fileInfo2.Id)
+		require.NoError(t, err)
+		appErr := th.App.RemoveFile(fileInfo2.Path)
+		require.Nil(t, appErr)
 	}()
 
 	fileInfo3, err := th.App.DoUploadFile(th.Context,
@@ -725,8 +780,10 @@ func TestPluginAPIGetFileInfos(t *testing.T) {
 	)
 	require.Nil(t, err)
 	defer func() {
-		th.App.Srv().Store().FileInfo().PermanentDelete(th.Context, fileInfo3.Id)
-		th.App.RemoveFile(fileInfo3.Path)
+		err := th.App.Srv().Store().FileInfo().PermanentDelete(th.Context, fileInfo3.Id)
+		require.NoError(t, err)
+		appErr := th.App.RemoveFile(fileInfo3.Path)
+		require.Nil(t, appErr)
 	}()
 
 	_, err = api.CreatePost(&model.Post{
@@ -813,43 +870,12 @@ func TestPluginAPISavePluginConfig(t *testing.T) {
 	assert.Equal(t, expectedConfiguration, savedConfiguration)
 }
 
-func TestPluginAPIGetPluginConfig(t *testing.T) {
-	th := Setup(t)
-	defer th.TearDown()
-
-	manifest := &model.Manifest{
-		Id: "pluginid",
-		SettingsSchema: &model.PluginSettingsSchema{
-			Settings: []*model.PluginSetting{
-				{Key: "MyStringSetting", Type: "text"},
-				{Key: "MyIntSetting", Type: "text"},
-				{Key: "MyBoolSetting", Type: "bool"},
-			},
-		},
-	}
-
-	api := NewPluginAPI(th.App, th.Context, manifest)
-
-	pluginConfigJsonString := `{"mystringsetting": "str", "myintsetting": 32, "myboolsetting": true}`
-	var pluginConfig map[string]any
-
-	err := json.Unmarshal([]byte(pluginConfigJsonString), &pluginConfig)
-	require.NoError(t, err)
-
-	th.App.UpdateConfig(func(cfg *model.Config) {
-		cfg.PluginSettings.Plugins["pluginid"] = pluginConfig
-	})
-
-	savedPluginConfig := api.GetPluginConfig()
-	assert.Equal(t, pluginConfig, savedPluginConfig)
-}
-
 func TestPluginAPILoadPluginConfiguration(t *testing.T) {
 	th := Setup(t)
 	defer th.TearDown()
 
 	var pluginJson map[string]any
-	err := json.Unmarshal([]byte(`{"mystringsetting": "str", "MyIntSetting": 32, "myboolsetting": true}`), &pluginJson)
+	err := json.Unmarshal([]byte(`{"mystringsetting": "str", "MyIntSetting": 32, "myBoolsetting": true}`), &pluginJson)
 	require.NoError(t, err)
 
 	th.App.UpdateConfig(func(cfg *model.Config) {
@@ -951,7 +977,8 @@ func TestPluginAPIGetPlugins(t *testing.T) {
 		backend := filepath.Join(pluginDir, pluginID, "backend.exe")
 		utils.CompileGo(t, pluginCode, backend)
 
-		os.WriteFile(filepath.Join(pluginDir, pluginID, "plugin.json"), []byte(fmt.Sprintf(`{"id": "%s", "server": {"executable": "backend.exe"}}`, pluginID)), 0600)
+		err := os.WriteFile(filepath.Join(pluginDir, pluginID, "plugin.json"), []byte(fmt.Sprintf(`{"id": "%s", "server": {"executable": "backend.exe"}}`, pluginID)), 0600)
+		require.NoError(t, err)
 		manifest, activated, reterr := env.Activate(pluginID)
 
 		require.NoError(t, reterr)
@@ -1037,7 +1064,8 @@ func TestInstallPlugin(t *testing.T) {
 		backend := filepath.Join(pluginDir, pluginID, "backend.exe")
 		utils.CompileGo(t, pluginCode, backend)
 
-		os.WriteFile(filepath.Join(pluginDir, pluginID, "plugin.json"), []byte(pluginManifest), 0600)
+		err = os.WriteFile(filepath.Join(pluginDir, pluginID, "plugin.json"), []byte(pluginManifest), 0600)
+		require.NoError(t, err)
 		manifest, activated, reterr := env.Activate(pluginID)
 		require.NoError(t, reterr)
 		require.NotNil(t, manifest)
@@ -1425,14 +1453,14 @@ func TestPluginCreateBot(t *testing.T) {
 	api := th.SetupPluginAPI()
 
 	bot, err := api.CreateBot(&model.Bot{
-		Username:    model.NewRandomString(10),
+		Username:    "a" + model.NewRandomString(10),
 		DisplayName: "bot",
 		Description: "bot",
 	})
 	require.Nil(t, err)
 
 	_, err = api.CreateBot(&model.Bot{
-		Username:    model.NewRandomString(10),
+		Username:    "a" + model.NewRandomString(10),
 		OwnerId:     bot.UserId,
 		DisplayName: "bot2",
 		Description: "bot2",
@@ -1451,8 +1479,10 @@ func TestPluginCreatePostWithUploadedFile(t *testing.T) {
 	fileInfo, err := api.UploadFile(data, channelID, filename)
 	require.Nil(t, err)
 	defer func() {
-		th.App.Srv().Store().FileInfo().PermanentDelete(th.Context, fileInfo.Id)
-		th.App.RemoveFile(fileInfo.Path)
+		err := th.App.Srv().Store().FileInfo().PermanentDelete(th.Context, fileInfo.Id)
+		require.NoError(t, err)
+		appErr := th.App.RemoveFile(fileInfo.Path)
+		require.Nil(t, appErr)
 	}()
 
 	actualData, err := api.GetFile(fileInfo.Id)
@@ -1752,7 +1782,8 @@ func TestAPIMetrics(t *testing.T) {
 	}
 `
 		utils.CompileGo(t, code, backend)
-		os.WriteFile(filepath.Join(pluginDir, pluginID, "plugin.json"), []byte(`{"id": "`+pluginID+`", "server": {"executable": "backend.exe"}}`), 0600)
+		err = os.WriteFile(filepath.Join(pluginDir, pluginID, "plugin.json"), []byte(`{"id": "`+pluginID+`", "server": {"executable": "backend.exe"}}`), 0600)
+		require.NoError(t, err)
 
 		// Don't care about these mocks
 		metricsMock.On("ObservePluginHookDuration", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return()
@@ -2192,7 +2223,8 @@ func TestPluginUploadsAPI(t *testing.T) {
 	backend := filepath.Join(pluginDir, pluginID, "backend.exe")
 	utils.CompileGo(t, pluginCode, backend)
 
-	os.WriteFile(filepath.Join(pluginDir, pluginID, "plugin.json"), []byte(pluginManifest), 0600)
+	err = os.WriteFile(filepath.Join(pluginDir, pluginID, "plugin.json"), []byte(pluginManifest), 0600)
+	require.NoError(t, err)
 	manifest, activated, reterr := env.Activate(pluginID)
 	require.NoError(t, reterr)
 	require.NotNil(t, manifest)
@@ -2231,7 +2263,8 @@ func TestConfigurationWillBeSavedHook(t *testing.T) {
 		backend := filepath.Join(pluginDir, pluginID, "backend.exe")
 		utils.CompileGo(t, code, backend)
 
-		os.WriteFile(filepath.Join(pluginDir, pluginID, "plugin.json"), []byte(pluginManifest), 0600)
+		err = os.WriteFile(filepath.Join(pluginDir, pluginID, "plugin.json"), []byte(pluginManifest), 0600)
+		require.NoError(t, err)
 		manifest, activated, reterr := env.Activate(pluginID)
 		require.NoError(t, reterr)
 		require.NotNil(t, manifest)
@@ -2408,8 +2441,8 @@ func TestPluginServeMetrics(t *testing.T) {
 	th.App.UpdateConfig(func(cfg *model.Config) {
 		prevEnable = cfg.MetricsSettings.Enable
 		prevAddress = cfg.MetricsSettings.ListenAddress
-		cfg.MetricsSettings.Enable = model.NewBool(true)
-		cfg.MetricsSettings.ListenAddress = model.NewString(":30067")
+		cfg.MetricsSettings.Enable = model.NewPointer(true)
+		cfg.MetricsSettings.ListenAddress = model.NewPointer(":30067")
 	})
 	defer th.App.UpdateConfig(func(cfg *model.Config) {
 		cfg.MetricsSettings.Enable = prevEnable

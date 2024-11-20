@@ -28,6 +28,7 @@ import './fetch_commands';
 import './keycloak_commands';
 import './ldap_commands';
 import './ldap_server_commands';
+import './notification_commands';
 import './okta_commands';
 import './saml_commands';
 import './shell';
@@ -261,7 +262,6 @@ function resetUserPreference(userId) {
     cy.apiSaveOnboardingTaskListPreference(userId, 'onboarding_task_list_open', 'false');
     cy.apiSaveOnboardingTaskListPreference(userId, 'onboarding_task_list_show', 'false');
     cy.apiSaveCloudTrialBannerPreference(userId, 'trial', 'max_days_banner');
-    cy.apiSaveActionsMenuPreference(userId);
     cy.apiSaveSkipStepsPreference(userId, 'true');
     cy.apiSaveStartTrialModal(userId, 'true');
     cy.apiSaveUnreadScrollPositionPreference(userId, 'start_from_left_off');

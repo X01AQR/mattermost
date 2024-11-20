@@ -11,6 +11,7 @@ export type ClientConfig = {
     AndroidLatestVersion: string;
     AndroidMinVersion: string;
     AppDownloadLink: string;
+    AppsPluginEnabled: string;
     AsymmetricSigningPublicKey: string;
     AvailableLocales: string;
     BannerColor: string;
@@ -57,12 +58,14 @@ export type ClientConfig = {
     EnableCustomEmoji: string;
     EnableCustomGroups: string;
     EnableCustomUserStatuses: string;
+    EnableExperimentalLocales: string;
     EnableUserStatuses: string;
     EnableLastActiveTime: string;
     EnableTimedDND: string;
     EnableCustomTermsOfService: string;
     EnableDeveloper: string;
     EnableDiagnostics: string;
+    EnableDesktopLandingPage: 'true' | 'false';
     EnableEmailBatching: string;
     EnableEmailInvitations: string;
     EnableEmojiPicker: string;
@@ -87,7 +90,6 @@ export type ClientConfig = {
     EnableOutgoingWebhooks: string;
     EnablePostIconOverride: string;
     EnablePostUsernameOverride: string;
-    EnablePreviewFeatures: string;
     EnablePreviewModeBanner: string;
     EnablePublicLink: string;
     EnableReliableWebSockets: string;
@@ -211,6 +213,8 @@ export type ClientConfig = {
     ServiceEnvironment: string;
     UniqueEmojiReactionLimitPerPost: string;
     UsersStatusAndProfileFetchingPollIntervalMilliseconds: string;
+    YoutubeReferrerPolicy: 'true' | 'false';
+    ScheduledPosts: string;
 };
 
 export type License = {
@@ -357,7 +361,6 @@ export type ServiceSettings = {
     EnableUserStatuses: boolean;
     ExperimentalEnableAuthenticationTransfer: boolean;
     ClusterLogTimeoutMilliseconds: number;
-    EnablePreviewFeatures: boolean;
     EnableTutorial: boolean;
     EnableOnboardingFlow: boolean;
     ExperimentalEnableDefaultChannelLeaveJoinMessages: boolean;
@@ -385,7 +388,6 @@ export type ServiceSettings = {
     DebugSplit: boolean;
     ManagedResourcePaths: string;
     EnableCustomGroups: boolean;
-    SelfHostedPurchase: boolean;
     AllowSyncedDrafts: boolean;
     AllowPersistentNotifications: boolean;
     AllowPersistentNotificationsForGuests: boolean;
@@ -395,6 +397,9 @@ export type ServiceSettings = {
     UniqueEmojiReactionLimitPerPost: number;
     RefreshPostStatsRunTime: string;
     MaximumPayloadSizeBytes: number;
+    EnableAPIPostDeletion: boolean;
+    EnableDesktopLandingPage: boolean;
+    MaximumURLLength: number;
 };
 
 export type TeamSettings = {
@@ -461,7 +466,6 @@ export type LogSettings = {
     EnableDiagnostics: boolean;
     VerboseDiagnostics: boolean;
     EnableSentry: boolean;
-    AdvancedLoggingConfig: string;
     AdvancedLoggingJSON: Record<string, any>;
     MaxFieldSize: number;
 };
@@ -474,7 +478,6 @@ export type ExperimentalAuditSettings = {
     FileMaxBackups: number;
     FileCompress: boolean;
     FileMaxQueueSize: number;
-    AdvancedLoggingConfig: string;
     AdvancedLoggingJSON: Record<string, any>;
 };
 
@@ -487,7 +490,6 @@ export type NotificationLogSettings = {
     FileLevel: string;
     FileJson: boolean;
     FileLocation: string;
-    AdvancedLoggingConfig: string;
     AdvancedLoggingJSON: Record<string, any>;
 };
 
@@ -509,6 +511,13 @@ export type WranglerSettings = {
     MoveThreadFromDirectMessageChannelEnable: boolean;
     MoveThreadFromGroupMessageChannelEnable: boolean;
 };
+
+export type ConnectedWorkspacesSettings = {
+    EnableSharedChannels: boolean;
+    EnableRemoteClusterService: boolean;
+    DisableSharedChannelsStatusSync: boolean;
+    MaxPostsPerSync: number;
+}
 
 export type FileSettings = {
     EnableFileAttachments: boolean;
@@ -536,6 +545,7 @@ export type FileSettings = {
     AmazonS3Trace: boolean;
     AmazonS3RequestTimeoutMilliseconds: number;
     AmazonS3UploadPartSizeBytes: number;
+    AmazonS3StorageClass: string;
     DedicatedExportStore: boolean;
     ExportDriverName: string;
     ExportDirectory: string;
@@ -552,6 +562,7 @@ export type FileSettings = {
     ExportAmazonS3RequestTimeoutMilliseconds: number;
     ExportAmazonS3PresignExpiresSeconds: number;
     ExportAmazonS3UploadPartSizeBytes: number;
+    ExportAmazonS3StorageClass: string;
 };
 
 export type EmailSettings = {
@@ -697,7 +708,6 @@ export type LdapSettings = {
     LoginButtonColor: string;
     LoginButtonBorderColor: string;
     LoginButtonTextColor: string;
-    Trace: boolean;
 };
 
 export type ComplianceSettings = {
@@ -711,6 +721,7 @@ export type LocalizationSettings = {
     DefaultServerLocale: string;
     DefaultClientLocale: string;
     AvailableLocales: string;
+    EnableExperimentalLocales: boolean;
 };
 
 export type SamlSettings = {
@@ -755,6 +766,7 @@ export type NativeAppSettings = {
     AppDownloadLink: string;
     AndroidAppDownloadLink: string;
     IosAppDownloadLink: string;
+    MobileExternalBrowser: boolean;
 };
 
 export type ClusterSettings = {
@@ -775,6 +787,8 @@ export type MetricsSettings = {
     Enable: boolean;
     BlockProfileRate: number;
     ListenAddress: string;
+    EnableClientMetrics: boolean;
+    EnableNotificationMetrics: boolean;
 };
 
 export type ExperimentalSettings = {
@@ -787,14 +801,26 @@ export type ExperimentalSettings = {
     DisableAppBar: boolean;
     DisableRefetchingOnBrowserFocus: boolean;
     DelayChannelAutocomplete: boolean;
+    DisableWakeUpReconnectHandler: boolean;
+    UsersStatusAndProfileFetchingPollIntervalMilliseconds: number;
+    YoutubeReferrerPolicy: boolean;
 };
 
 export type AnalyticsSettings = {
     MaxUsersForStatistics: number;
 };
 
+export type CacheSettings = {
+    CacheType: string;
+    RedisAddress: string;
+    RedisPassword: string;
+    RedisDB: number;
+    DisableClientCache: boolean;
+};
+
 export type ElasticsearchSettings = {
     ConnectionURL: string;
+    Backend: string;
     Username: string;
     Password: string;
     EnableIndexing: boolean;
@@ -868,8 +894,6 @@ export type JobSettings = {
     CleanupJobsThresholdDays: number;
     CleanupConfigThresholdDays: number;
 };
-
-export type ProductSettings = Record<string, never>;
 
 export type PluginSettings = {
     Enable: boolean;
@@ -957,12 +981,12 @@ export type AdminConfig = {
     MetricsSettings: MetricsSettings;
     ExperimentalSettings: ExperimentalSettings;
     AnalyticsSettings: AnalyticsSettings;
+    CacheSettings: CacheSettings;
     ElasticsearchSettings: ElasticsearchSettings;
     BleveSettings: BleveSettings;
     DataRetentionSettings: DataRetentionSettings;
     MessageExportSettings: MessageExportSettings;
     JobSettings: JobSettings;
-    ProductSettings: ProductSettings;
     PluginSettings: PluginSettings;
     DisplaySettings: DisplaySettings;
     GuestAccountsSettings: GuestAccountsSettings;
@@ -972,6 +996,7 @@ export type AdminConfig = {
     ImportSettings: ImportSettings;
     ExportSettings: ExportSettings;
     WranglerSettings: WranglerSettings;
+    ConnectedWorkspacesSettings: ConnectedWorkspacesSettings;
 };
 
 export type ReplicaLagSetting = {

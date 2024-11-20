@@ -103,7 +103,6 @@ export const Preferences = {
     UNREAD_SCROLL_POSITION_START_FROM_LEFT: 'start_from_left_off',
     UNREAD_SCROLL_POSITION_START_FROM_NEWEST: 'start_from_newest',
     CATEGORY_THEME: 'theme',
-    CATEGORY_FLAGGED_POST: 'flagged_post',
     CATEGORY_NOTIFICATIONS: 'notifications',
     EMAIL_INTERVAL: 'email_interval',
     INTERVAL_IMMEDIATE: 30, // "immediate" is a 30 second interval
@@ -147,7 +146,7 @@ export const Preferences = {
     DELINQUENCY_MODAL_CONFIRMED: 'delinquency_modal_confirmed',
     CONFIGURATION_BANNERS: 'configuration_banners',
     NOTIFY_ADMIN_REVOKE_DOWNGRADED_WORKSPACE: 'admin_revoke_downgraded_instance',
-    OVERAGE_USERS_BANNER: 'overage_users_banner',
+    OVERAGE_USERS_BANNER: ReduxPreferences.CATEGORY_OVERAGE_USERS_BANNER,
     TO_CLOUD_YEARLY_PLAN_NUDGE: 'to_cloud_yearly_plan_nudge',
     TO_PAID_PLAN_NUDGE: 'to_paid_plan_nudge',
     CLOUD_ANNUAL_RENEWAL_BANNER: 'cloud_annual_renewal_banner',
@@ -198,6 +197,7 @@ export const ActionTypes = keyMirror({
     UPDATE_RHS_SEARCH_TERMS: null,
     UPDATE_RHS_SEARCH_TYPE: null,
     UPDATE_RHS_SEARCH_RESULTS_TERMS: null,
+    UPDATE_RHS_SEARCH_RESULTS_TYPE: null,
 
     SET_RHS_SIZE: null,
 
@@ -235,6 +235,7 @@ export const ActionTypes = keyMirror({
     RECEIVED_ADMIN_CONSOLE_REDUCER: null,
     REMOVED_ADMIN_CONSOLE_REDUCER: null,
     RECEIVED_ADMIN_CONSOLE_CUSTOM_COMPONENT: null,
+    RECEIVED_ADMIN_CONSOLE_CUSTOM_SECTION: null,
     RECEIVED_PLUGIN_STATS_HANDLER: null,
     RECEIVED_PLUGIN_USER_SETTINGS: null,
 
@@ -461,6 +462,13 @@ export const ModalIdentifiers = {
     EXPORT_ERROR_MODAL: 'export_error_modal',
     CHANNEL_BOOKMARK_DELETE: 'channel_bookmark_delete',
     CHANNEL_BOOKMARK_CREATE: 'channel_bookmark_create',
+    CONFIRM_MANAGE_USER_SETTINGS_MODAL: 'confirm_switch_to_settings',
+    SCHEDULED_POST_CUSTOM_TIME_MODAL: 'scheduled_post_custom_time',
+    SECURE_CONNECTION_DELETE: 'secure_connection_delete',
+    SECURE_CONNECTION_CREATE_INVITE: 'secure_connection_create_invite',
+    SECURE_CONNECTION_ACCEPT_INVITE: 'secure_connection_accept_invite',
+    SHARED_CHANNEL_REMOTE_INVITE: 'shared_channel_remote_invite',
+    SHARED_CHANNEL_REMOTE_UNINVITE: 'shared_channel_remote_uninvite',
 };
 
 export const UserStatuses = {
@@ -652,6 +660,9 @@ export const SocketEvents = {
     DRAFT_CREATED: 'draft_created',
     DRAFT_UPDATED: 'draft_updated',
     DRAFT_DELETED: 'draft_deleted',
+    SCHEDULED_POST_CREATED: 'scheduled_post_created',
+    SCHEDULED_POST_UPDATED: 'scheduled_post_updated',
+    SCHEDULED_POST_DELETED: 'scheduled_post_deleted',
     PERSISTENT_NOTIFICATION_TRIGGERED: 'persistent_notification_triggered',
     HOSTED_CUSTOMER_SIGNUP_PROGRESS_UPDATED: 'hosted_customer_signup_progress_updated',
 };
@@ -675,11 +686,6 @@ export const CrtTutorialSteps = {
     WELCOME_POPOVER: 0,
     LIST_POPOVER: 1,
     UNREAD_POPOVER: 2,
-    FINISHED: 999,
-};
-
-export const ExploreOtherToolsTourSteps = {
-    PLAYBOOKS_TOUR: 1,
     FINISHED: 999,
 };
 
@@ -870,6 +876,7 @@ export const StoragePrefixes = {
     INLINE_IMAGE_VISIBLE: 'isInlineImageVisible_',
     DELINQUENCY: 'delinquency_',
     HIDE_JOINED_CHANNELS: 'hideJoinedChannels',
+    HIDE_NOTIFICATION_PERMISSION_REQUEST_BANNER: 'hideNotificationPermissionRequestBanner',
 };
 
 export const LandingPreferenceTypes = {
@@ -994,6 +1001,7 @@ export const NotificationLevels = {
 } as const;
 
 export const DesktopSound = {
+    DEFAULT: 'default',
     ON: 'on',
     OFF: 'off',
 } as const;
@@ -1023,7 +1031,6 @@ export const AdvancedSections = {
     CONTROL_SEND: 'advancedCtrlSend',
     FORMATTING: 'formatting',
     JOIN_LEAVE: 'joinLeave',
-    PREVIEW_FEATURES: 'advancedPreviewFeatures',
     PERFORMANCE_DEBUGGING: 'performanceDebugging',
     SYNC_DRAFTS: 'syncDrafts',
 };
@@ -1396,6 +1403,26 @@ export const DefaultRolePermissions = {
     ],
 };
 
+// ModeratedPermissions are permissions that can be turned off for members and guests
+// on a per channel basis. These permissions are on by default for team/channel admins.
+export const ModeratedPermissions = [
+    Permissions.CREATE_POST,
+    Permissions.UPLOAD_FILE,
+    Permissions.ADD_REACTION,
+    Permissions.REMOVE_REACTION,
+    Permissions.MANAGE_PUBLIC_CHANNEL_MEMBERS,
+    Permissions.MANAGE_PRIVATE_CHANNEL_MEMBERS,
+    Permissions.USE_CHANNEL_MENTIONS,
+    Permissions.ADD_BOOKMARK_PUBLIC_CHANNEL,
+    Permissions.EDIT_BOOKMARK_PUBLIC_CHANNEL,
+    Permissions.DELETE_BOOKMARK_PUBLIC_CHANNEL,
+    Permissions.ORDER_BOOKMARK_PUBLIC_CHANNEL,
+    Permissions.ADD_BOOKMARK_PRIVATE_CHANNEL,
+    Permissions.EDIT_BOOKMARK_PRIVATE_CHANNEL,
+    Permissions.DELETE_BOOKMARK_PRIVATE_CHANNEL,
+    Permissions.ORDER_BOOKMARK_PRIVATE_CHANNEL,
+];
+
 export const Locations = {
     CENTER: 'CENTER' as const,
     RHS_ROOT: 'RHS_ROOT' as const,
@@ -1421,6 +1448,11 @@ export const exportFormats = {
     EXPORT_FORMAT_GLOBALRELAY: 'globalrelay',
 };
 
+export const CacheTypes = {
+    REDIS: 'redis',
+    LRU: 'lru',
+};
+
 export const ZoomSettings = {
     DEFAULT_SCALE: 1.75,
     SCALE_DELTA: 0.25,
@@ -1439,7 +1471,6 @@ export const Constants = {
     AdminTutorialSteps,
     CrtTutorialSteps,
     CrtTutorialTriggerSteps,
-    ExploreOtherToolsTourSteps,
     CrtThreadPaneSteps,
     PostTypes,
     ErrorPageTypes,
@@ -1449,6 +1480,8 @@ export const Constants = {
     Locations,
     PostListRowListIds,
     MAX_POST_VISIBILITY: 1000000,
+    REMOTE_USERS_HOUR_LIMIT_END_OF_THE_DAY: 22,
+    REMOTE_USERS_HOUR_LIMIT_BEGINNING_OF_THE_DAY: 6,
 
     IGNORE_POST_TYPES: [PostTypes.JOIN_LEAVE, PostTypes.JOIN_TEAM, PostTypes.LEAVE_TEAM, PostTypes.JOIN_CHANNEL, PostTypes.LEAVE_CHANNEL, PostTypes.REMOVE_FROM_CHANNEL, PostTypes.ADD_REMOVE],
 
@@ -1629,7 +1662,7 @@ export const Constants = {
     DEFAULT_EMOJI_PICKER_LEFT_OFFSET: 87,
     DEFAULT_EMOJI_PICKER_RIGHT_OFFSET: 15,
     EMOJI_PICKER_WIDTH_OFFSET: 295,
-    SIDEBAR_MINIMUM_WIDTH: 400,
+    SIDEBAR_MINIMUM_WIDTH: 640,
     THEME_ELEMENTS: [
         {
             group: 'sidebarElements',
@@ -1976,8 +2009,6 @@ export const Constants = {
         COMMAND_SUGGESTION_CHANNEL: 'channel',
         COMMAND_SUGGESTION_USER: 'user',
     },
-    FeatureTogglePrefix: 'feature_enabled_',
-    PRE_RELEASE_FEATURES: {},
     OVERLAY_TIME_DELAY_SMALL: 100,
     OVERLAY_TIME_DELAY: 400,
     OVERLAY_DEFAULT_TRIGGER: ['hover', 'focus'],
@@ -2043,7 +2074,6 @@ export const Constants = {
     MENTION_RECENT_CHANNELS: 'mention.recent.channels',
     MENTION_SPECIAL: 'mention.special',
     MENTION_GROUPS: 'search.group',
-    DEFAULT_NOTIFICATION_DURATION: 5000,
     STATUS_INTERVAL: 60000,
     AUTOCOMPLETE_TIMEOUT: 100,
     AUTOCOMPLETE_SPLIT_CHARACTERS: ['.', '-', '_'],
@@ -2196,4 +2226,12 @@ export const PageLoadContext = {
     RECONNECT: 'reconnect',
 } as const;
 
+export const SCHEDULED_POST_URL_SUFFIX = 'scheduled_posts';
+
+export const scheduledPosts = {
+    RECENTLY_USED_CUSTOM_TIME: 'recently_used_custom_time',
+    SCHEDULED_POSTS: 'scheduled_posts',
+};
+
 export default Constants;
+

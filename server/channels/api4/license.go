@@ -17,11 +17,11 @@ import (
 )
 
 func (api *API) InitLicense() {
-	api.BaseRoutes.APIRoot.Handle("/trial-license", api.APISessionRequired(requestTrialLicense)).Methods("POST")
-	api.BaseRoutes.APIRoot.Handle("/trial-license/prev", api.APISessionRequired(getPrevTrialLicense)).Methods("GET")
-	api.BaseRoutes.APIRoot.Handle("/license", api.APISessionRequired(addLicense, handlerParamFileAPI)).Methods("POST")
-	api.BaseRoutes.APIRoot.Handle("/license", api.APISessionRequired(removeLicense)).Methods("DELETE")
-	api.BaseRoutes.APIRoot.Handle("/license/client", api.APIHandler(getClientLicense)).Methods("GET")
+	api.BaseRoutes.APIRoot.Handle("/trial-license", api.APISessionRequired(requestTrialLicense)).Methods(http.MethodPost)
+	api.BaseRoutes.APIRoot.Handle("/trial-license/prev", api.APISessionRequired(getPrevTrialLicense)).Methods(http.MethodGet)
+	api.BaseRoutes.APIRoot.Handle("/license", api.APISessionRequired(addLicense, handlerParamFileAPI)).Methods(http.MethodPost)
+	api.BaseRoutes.APIRoot.Handle("/license", api.APISessionRequired(removeLicense)).Methods(http.MethodDelete)
+	api.BaseRoutes.APIRoot.Handle("/license/client", api.APIHandler(getClientLicense)).Methods(http.MethodGet)
 }
 
 func getClientLicense(c *Context, w http.ResponseWriter, r *http.Request) {
@@ -45,7 +45,9 @@ func getClientLicense(c *Context, w http.ResponseWriter, r *http.Request) {
 		clientLicense = c.App.Srv().GetSanitizedClientLicense()
 	}
 
-	w.Write([]byte(model.MapToJSON(clientLicense)))
+	if _, err := w.Write([]byte(model.MapToJSON(clientLicense))); err != nil {
+		c.Logger.Warn("Error while writing response", mlog.Err(err))
+	}
 }
 
 func addLicense(c *Context, w http.ResponseWriter, r *http.Request) {
@@ -93,7 +95,10 @@ func addLicense(c *Context, w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	buf := bytes.NewBuffer(nil)
-	io.Copy(buf, file)
+	if _, err := io.Copy(buf, file); err != nil {
+		c.Err = model.NewAppError("addLicense", "api.license.add_license.copy.app_error", nil, "", http.StatusInternalServerError).Wrap(err)
+		return
+	}
 
 	licenseBytes := buf.Bytes()
 	license, appErr := utils.LicenseValidator.LicenseFromBytes(licenseBytes)
@@ -137,7 +142,11 @@ func addLicense(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	if c.App.Channels().License().IsCloud() {
 		// If cloud, invalidate the caches when a new license is loaded
-		defer c.App.Srv().Cloud.HandleLicenseChange()
+		defer func() {
+			if err := c.App.Srv().Cloud.HandleLicenseChange(); err != nil {
+				c.Logger.Warn("Error while handling license change", mlog.Err(err))
+			}
+		}()
 	}
 
 	auditRec.Success()
@@ -212,7 +221,12 @@ func requestTrialLicense(c *Context, w http.ResponseWriter, r *http.Request) {
 		c.Err = model.NewAppError("requestTrialLicense", "api.license.request-trial.bad-request", nil, "", http.StatusBadRequest)
 		return
 	}
-	json.Unmarshal(b, &trialRequest)
+
+	err = json.Unmarshal(b, &trialRequest)
+	if err != nil {
+		c.Err = model.NewAppError("requestTrialLicense", "api.license.request-trial.bad-request", nil, "", http.StatusBadRequest).Wrap(err)
+		return
+	}
 
 	var appErr *model.AppError
 	// If any of the newly supported trial request fields are set (ie, not a legacy request), process this as a new trial request (requiring the new fields) otherwise fall back on the old method.
@@ -253,5 +267,8 @@ func getPrevTrialLicense(c *Context, w http.ResponseWriter, r *http.Request) {
 		clientLicense = utils.GetSanitizedClientLicense(utils.GetClientLicense(license))
 	}
 
-	w.Write([]byte(model.MapToJSON(clientLicense)))
+	w.Header().Set("Content-Type", "application/json")
+	if _, err := w.Write([]byte(model.MapToJSON(clientLicense))); err != nil {
+		c.Logger.Warn("Error while writing response", mlog.Err(err))
+	}
 }
